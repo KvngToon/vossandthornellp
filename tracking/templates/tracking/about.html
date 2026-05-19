@@ -1,0 +1,594 @@
+{% extends "tracking/base.html" %}
+{% block title %}About Voss &amp; Thorne LLP — Cargo Intelligence{% endblock %}
+{% block body_class %}page-about{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ══ ABOUT HERO ═════════════════════════════════════════════ */
+  .about-hero {
+    position: relative;
+    padding: 9rem 0 7rem;
+    overflow: hidden;
+  }
+  .about-hero__bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 80% at 80% 50%, rgba(45,107,228,.06) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 60% at 0% 0%, rgba(201,168,76,.05) 0%, transparent 60%);
+  }
+  /* Large background number */
+  .about-hero__ghost {
+    position: absolute;
+    right: -3rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--ff-display);
+    font-weight: 900;
+    font-size: clamp(12rem, 25vw, 22rem);
+    letter-spacing: -.04em;
+    text-transform: uppercase;
+    -webkit-text-stroke: 1px var(--border);
+    color: transparent;
+    pointer-events: none;
+    user-select: none;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .about-hero__inner {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 clamp(1.5rem, 5vw, 3.5rem);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+    align-items: center;
+  }
+
+  .about-hero__kicker {
+    font-family: var(--ff-mono);
+    font-size: .62rem;
+    font-weight: 600;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+  .about-hero__kicker::before { content: ''; width: 32px; height: 1px; background: var(--accent); }
+
+  .about-hero__headline {
+    font-family: var(--ff-display);
+    font-weight: 900;
+    font-size: clamp(3rem, 7vw, 6rem);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    line-height: .9;
+    color: var(--text);
+  }
+  .about-hero__headline em {
+    font-style: normal;
+    -webkit-text-stroke: 1px var(--accent-lo);
+    color: transparent;
+  }
+
+  .about-hero__body {
+    font-family: var(--ff-body);
+    font-style: italic;
+    font-size: 1.12rem;
+    color: var(--text2);
+    line-height: 1.75;
+    margin-bottom: 2rem;
+  }
+
+  .about-hero__cta { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+  /* Right: established card */
+  .est-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--r-xl);
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .est-card::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: 2rem; right: 2rem;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+  }
+  .est-card__year {
+    font-family: var(--ff-display);
+    font-weight: 900;
+    font-size: 4.5rem;
+    letter-spacing: -.02em;
+    color: var(--border2);
+    line-height: 1;
+    margin-bottom: 1.25rem;
+  }
+  .est-card__label {
+    font-family: var(--ff-mono);
+    font-size: .62rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 1.5rem;
+  }
+  .est-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+    margin-top: 2rem;
+  }
+  .est-stat {
+    background: var(--surface2);
+    padding: 1.25rem;
+  }
+  .est-stat__num {
+    font-family: var(--ff-display);
+    font-weight: 900;
+    font-size: 1.9rem;
+    letter-spacing: .04em;
+    color: var(--text);
+    line-height: 1;
+  }
+  .est-stat__num span { color: var(--accent); }
+  .est-stat__label {
+    font-family: var(--ff-mono);
+    font-size: .58rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: .3rem;
+  }
+
+  /* ══ DIVIDER BAND ═══════════════════════════════════════════ */
+  .divider-band {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 1.75rem 0;
+    overflow: hidden;
+  }
+  .divider-band__inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 clamp(1.5rem, 5vw, 3.5rem);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .divider-band__item {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    font-family: var(--ff-mono);
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .divider-band__item svg { color: var(--accent); flex-shrink: 0; }
+  .divider-band__sep {
+    width: 1px;
+    height: 20px;
+    background: var(--border2);
+  }
+
+  /* ══ MISSION ════════════════════════════════════════════════ */
+  .mission-section {
+    padding: 8rem 0;
+    position: relative;
+  }
+  .mission-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+    align-items: start;
+  }
+  .mission-sticky {
+    position: sticky;
+    top: calc(var(--nav-h) + 2rem);
+  }
+
+  .mission-kicker {
+    font-family: var(--ff-mono);
+    font-size: .62rem;
+    font-weight: 600;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+  .mission-kicker::before { content: ''; width: 32px; height: 1px; background: var(--accent); }
+
+  .mission-headline {
+    font-family: var(--ff-display);
+    font-weight: 900;
+    font-size: clamp(2rem, 4.5vw, 3.5rem);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    line-height: .95;
+    color: var(--text);
+    margin-bottom: 1.5rem;
+  }
+  .mission-body {
+    font-family: var(--ff-body);
+    font-size: 1.05rem;
+    color: var(--text2);
+    line-height: 1.8;
+  }
+  .mission-body p + p { margin-top: 1rem; }
+  .mission-body em { color: var(--accent); font-style: italic; }
+
+  /* Values */
+  .values-list { display: flex; flex-direction: column; gap: 1px; }
+  .value-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 1.75rem 2rem;
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+    margin-bottom: .75rem;
+    transition: border-color .25s, background .25s;
+  }
+  .value-item:hover { border-color: var(--border2); background: var(--surface2); }
+  .value-item__num {
+    font-family: var(--ff-display);
+    font-weight: 900;
+    font-size: 2.5rem;
+    line-height: 1;
+    letter-spacing: -.02em;
+    color: var(--border2);
+  }
+  .value-item__title {
+    font-family: var(--ff-display);
+    font-weight: 800;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text);
+    margin-bottom: .5rem;
+  }
+  .value-item__body {
+    font-family: var(--ff-body);
+    font-size: .92rem;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  /* ══ OFFICES ════════════════════════════════════════════════ */
+  .offices-section {
+    padding: 5rem 0 8rem;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+  .offices-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    margin-top: 3rem;
+  }
+  .office-card {
+    background: var(--bg);
+    padding: 2.5rem 2rem;
+    position: relative;
+    transition: background .25s;
+  }
+  .office-card:hover { background: var(--surface2); }
+  .office-card__city {
+    font-family: var(--ff-display);
+    font-weight: 900;
+    font-size: 2rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: .3rem;
+  }
+  .office-card__country {
+    font-family: var(--ff-mono);
+    font-size: .62rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+  }
+  .office-card__detail {
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+    margin-bottom: .8rem;
+  }
+  .office-card__detail-label {
+    font-family: var(--ff-mono);
+    font-size: .55rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--muted2);
+  }
+  .office-card__detail-val {
+    font-family: var(--ff-mono);
+    font-size: .72rem;
+    color: var(--text2);
+    letter-spacing: .04em;
+  }
+  .office-hq {
+    position: absolute;
+    top: 1.5rem; right: 1.5rem;
+    font-family: var(--ff-mono);
+    font-size: .55rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(201,168,76,.08);
+    border: 1px solid rgba(201,168,76,.25);
+    border-radius: 2px;
+    padding: .2rem .6rem;
+  }
+
+  /* ══ RESPONSIVE ═════════════════════════════════════════════ */
+  @media (max-width: 1000px) {
+    .about-hero__inner { grid-template-columns: 1fr; gap: 3rem; }
+    .mission-grid { grid-template-columns: 1fr; gap: 3rem; }
+    .mission-sticky { position: static; }
+    .offices-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .est-stats { grid-template-columns: 1fr 1fr; }
+    .divider-band__inner { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .divider-band__sep { display: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══════════════════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════════════════ -->
+<section class="about-hero scanlines">
+  <div class="about-hero__bg"></div>
+  <div class="about-hero__ghost" aria-hidden="true">LLP</div>
+
+  <div class="about-hero__inner">
+    <div>
+      <div class="about-hero__kicker sr">Established 1987</div>
+      <h1 class="about-hero__headline sr sr-delay-1">
+        The Firm<br>Behind The<br><em>Freight</em>
+      </h1>
+      <p class="about-hero__body sr sr-delay-2">
+        Voss &amp; Thorne LLP was founded on a single conviction: that critical cargo deserves the same precision and accountability as a legal brief. Decades later, that standard defines everything we do.
+      </p>
+      <div class="about-hero__cta sr sr-delay-3">
+        <a href="{% url 'tracking:home' %}#track" class="btn btn-gold">Track a Shipment</a>
+        <a href="#mission" class="btn btn-ghost">Our Mission</a>
+      </div>
+    </div>
+
+    <div class="est-card sr sr-delay-2">
+      <div class="est-card__label">Established</div>
+      <div class="est-card__year">1987</div>
+      <p style="font-family:var(--ff-body);font-style:italic;font-size:.95rem;color:var(--text2);line-height:1.6;">
+        From a single Hamburg office to a global network spanning six continents — built without compromise.
+      </p>
+      <div class="est-stats">
+        <div class="est-stat">
+          <div class="est-stat__num">190<span>+</span></div>
+          <div class="est-stat__label">Countries</div>
+        </div>
+        <div class="est-stat">
+          <div class="est-stat__num">2.4<span>M</span></div>
+          <div class="est-stat__label">Events / Day</div>
+        </div>
+        <div class="est-stat">
+          <div class="est-stat__num">48<span>K</span></div>
+          <div class="est-stat__label">Active Shipments</div>
+        </div>
+        <div class="est-stat">
+          <div class="est-stat__num">99.7<span>%</span></div>
+          <div class="est-stat__label">Uptime SLA</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     CAPABILITY BAND
+══════════════════════════════════════════════════════════ -->
+<div class="divider-band">
+  <div class="divider-band__inner">
+    <div class="divider-band__item sr">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.99 12 19.79 19.79 0 0 1 1.93 3.46 2 2 0 0 1 3.91 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9a16 16 0 0 0 6.29 6.29l1.09-1.09a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+      </svg>
+      24 / 7 / 365 Operations
+    </div>
+    <div class="divider-band__sep"></div>
+    <div class="divider-band__item sr sr-delay-1">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+      Air, Ocean &amp; Ground
+    </div>
+    <div class="divider-band__sep"></div>
+    <div class="divider-band__item sr sr-delay-2">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      ISO 9001:2015 Certified
+    </div>
+    <div class="divider-band__sep"></div>
+    <div class="divider-band__item sr sr-delay-3">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      Real-Time Event Logging
+    </div>
+    <div class="divider-band__sep"></div>
+    <div class="divider-band__item sr sr-delay-4">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      7-Year Compliance Archive
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MISSION + VALUES
+══════════════════════════════════════════════════════════ -->
+<section class="mission-section" id="mission">
+  <div class="container">
+    <div class="mission-grid">
+
+      <!-- Left sticky -->
+      <div class="mission-sticky">
+        <div class="mission-kicker sr">Our Purpose</div>
+        <h2 class="mission-headline sr sr-delay-1">Precision.<br>Accountability.<br>Reach.</h2>
+        <div class="mission-body sr sr-delay-2">
+          <p>
+            We exist because <em>critical cargo cannot afford uncertainty</em>. Whether you're moving electronics across three continents or routing perishables through a cold-chain corridor, every second of visibility matters.
+          </p>
+          <p>
+            Voss &amp; Thorne was built by logistics professionals who were tired of systems that went dark at the border. We built the infrastructure we always needed — and opened it to the world.
+          </p>
+          <p>
+            Today, our platform logs over 2.4 million tracking events per day, with a 99.7% uptime SLA and a legal-grade audit trail on every shipment.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right values -->
+      <div>
+        <div class="values-list">
+          <div class="value-item sr">
+            <div class="value-item__num">01</div>
+            <div>
+              <div class="value-item__title">Chain of Custody</div>
+              <p class="value-item__body">Every hand-off is logged. Every checkpoint timestamped. The complete provenance of your cargo is immutable and retrievable for seven years — no exceptions.</p>
+            </div>
+          </div>
+          <div class="value-item sr sr-delay-1">
+            <div class="value-item__num">02</div>
+            <div>
+              <div class="value-item__title">Network Depth</div>
+              <p class="value-item__body">190+ countries. 2,400+ carrier integrations. Our network was built to eliminate blind spots at borders, across oceans, and in the final mile where most systems fail.</p>
+            </div>
+          </div>
+          <div class="value-item sr sr-delay-2">
+            <div class="value-item__num">03</div>
+            <div>
+              <div class="value-item__title">Regulatory Compliance</div>
+              <p class="value-item__body">IATA, ADR, CITES, and local customs frameworks are baked into our workflows — not bolted on. Compliance documentation is generated automatically at each relevant checkpoint.</p>
+            </div>
+          </div>
+          <div class="value-item sr sr-delay-3">
+            <div class="value-item__num">04</div>
+            <div>
+              <div class="value-item__title">Client Confidentiality</div>
+              <p class="value-item__body">As an LLP, we operate under the same duty of confidentiality as a law firm. Cargo manifests, route data, and client identities are protected by the same standards.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     OFFICES
+══════════════════════════════════════════════════════════ -->
+<section class="offices-section">
+  <div class="container">
+    <div class="section-intro sr">
+      <div class="section-intro__kicker">Global Presence</div>
+      <h2 class="section-intro__headline">
+        Three Hubs.<br>Six Continents.
+      </h2>
+      <p class="section-intro__body">
+        Our principal offices anchor the three major logistics time zones, ensuring round-the-clock operational coverage with no handover gaps.
+      </p>
+    </div>
+
+    <div class="offices-grid">
+      <div class="office-card sr">
+        <div class="office-hq">HQ</div>
+        <div class="office-card__city">New York</div>
+        <div class="office-card__country">United States</div>
+        <div class="office-card__detail">
+          <div class="office-card__detail-label">Address</div>
+          <div class="office-card__detail-val">1221 Avenue of the Americas, 34F<br>New York, NY 10020</div>
+        </div>
+        <div class="office-card__detail">
+          <div class="office-card__detail-label">Operations</div>
+          <div class="office-card__detail-val">+1 (800) 555-5000</div>
+        </div>
+        <div class="office-card__detail">
+          <div class="office-card__detail-label">Coverage</div>
+          <div class="office-card__detail-val">Americas · North Atlantic</div>
+        </div>
+      </div>
+
+      <div class="office-card sr sr-delay-1">
+        <div class="office-card__city">London</div>
+        <div class="office-card__country">United Kingdom</div>
+        <div class="office-card__detail">
+          <div class="office-card__detail-label">Address</div>
+          <div class="office-card__detail-val">30 St Mary Axe, 12th Floor<br>London EC3A 8EP</div>
+        </div>
+        <div class="office-card__detail">
+          <div class="office-card__detail-label">Operations</div>
+          <div class="office-card__detail-val">+44 20 7946 0000</div>
+        </div>
+        <div class="office-card__detail">
+          <div class="office-card__detail-label">Coverage</div>
+          <div class="office-card__detail-val">Europe · Africa · Middle East</div>
+        </div>
+      </div>
+
+      <div class="office-card sr sr-delay-2">
+        <div class="office-card__city">Singapore</div>
+        <div class="office-card__country">Republic of Singapore</div>
+        <div class="office-card__detail">
+          <div class="office-card__detail-label">Address</div>
+          <div class="office-card__detail-val">One Raffles Place, Tower 2<br>Singapore 048616</div>
+        </div>
+        <div class="office-card__detail">
+          <div class="office-card__detail-label">Operations</div>
+          <div class="office-card__detail-val">+65 6000 0000</div>
+        </div>
+        <div class="office-card__detail">
+          <div class="office-card__detail-label">Coverage</div>
+          <div class="office-card__detail-val">Asia-Pacific · Indian Ocean</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

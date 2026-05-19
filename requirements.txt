@@ -1,0 +1,7 @@
+asgiref==3.11.1
+Django==4.2.30
+django-jazzmin==3.0.1
+pillow==11.3.0
+sqlparse==0.5.5
+typing_extensions==4.15.0
+whitenoise==6.11.0

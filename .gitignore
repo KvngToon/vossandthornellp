@@ -1,0 +1,24 @@
+# Virtual environment — never commit
+venv/
+
+# Python cache
+*.pyc
+*.pyo
+__pycache__/
+
+# Django
+db.sqlite3
+*.sqlite3
+staticfiles/
+media/
+.env
+local_settings.py
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,1029 @@
+{% extends "tracking/base.html" %}
+{% load tracking_extras %}
+{% block title %}Voss &amp; Thorne LLP — Cargo Intelligence{% endblock %}
+{% block body_class %}page-home{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ═══════════════════════════════════════════════════════
+   HERO
+═══════════════════════════════════════════════════════ */
+.hero {
+  position: relative;
+  width: 100%;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+#globe-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  opacity: .92;
+}
+.hero__vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(ellipse 80% 70% at 50% 50%, transparent 30%, rgba(7,7,13,.7) 75%, rgba(7,7,13,.97) 100%);
+  pointer-events: none;
+}
+.hero__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 1.5rem;
+  width: 100%;
+  max-width: 780px;
+}
+.hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: .65rem;
+  font-family: var(--ff-mono);
+  font-size: .62rem;
+  font-weight: 600;
+  letter-spacing: .32em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+}
+.hero__eyebrow::before,
+.hero__eyebrow::after {
+  content: '';
+  width: 28px;
+  height: 1px;
+  background: var(--accent);
+  opacity: .6;
+}
+.hero__title {
+  font-family: var(--ff-display);
+  font-weight: 900;
+  font-size: clamp(4.2rem, 11vw, 9rem);
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  line-height: .88;
+  color: var(--text);
+  margin-bottom: .3rem;
+}
+.hero__title-accent {
+  display: inline-block;
+  color: var(--text);
+  position: relative;
+}
+.hero__title-accent::after {
+  content: '';
+  position: absolute;
+  bottom: .06em;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hi), var(--accent));
+  border-radius: 2px;
+  animation: accent-shimmer 3s ease-in-out infinite;
+}
+@keyframes accent-shimmer {
+  0%,100% { opacity: 1; transform: scaleX(1); }
+  50% { opacity: .7; transform: scaleX(.94); }
+}
+.hero__sub {
+  font-family: var(--ff-body);
+  font-style: italic;
+  font-size: clamp(.95rem, 2vw, 1.15rem);
+  color: var(--muted);
+  margin-top: 1.4rem;
+  margin-bottom: 2.5rem;
+  max-width: 500px;
+  line-height: 1.65;
+}
+/* Glassmorphism form card */
+.hero__form {
+  width: 100%;
+  max-width: 520px;
+  background: rgba(14,14,24,.75);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: var(--r-xl);
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  padding: 1.75rem 2rem;
+  box-shadow: 0 24px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(201,168,76,.08);
+}
+.hero__form-row {
+  display: flex;
+  gap: .6rem;
+}
+.hero__form-input {
+  flex: 1;
+  padding: .9rem 1.1rem;
+  background: rgba(7,7,13,.8);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: var(--ff-mono);
+  font-size: .88rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.hero__form-input::placeholder { color: var(--muted2); letter-spacing: .1em; font-size: .78rem; }
+.hero__form-input:focus {
+  border-color: rgba(201,168,76,.55);
+  box-shadow: 0 0 0 3px rgba(201,168,76,.08);
+}
+.hero__form-btn {
+  position: relative;
+  overflow: hidden;
+  padding: .9rem 1.5rem;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--r);
+  color: var(--bg);
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: .95rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .2s, transform .15s;
+}
+.hero__form-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent);
+  transform: skewX(-20deg);
+  transition: left .55s ease;
+}
+.hero__form-btn:hover { background: var(--accent-hi); }
+.hero__form-btn:hover::before { left: 160%; }
+.hero__form-btn:active { transform: scale(.97); }
+.hero__form-note {
+  margin-top: .75rem;
+  font-family: var(--ff-mono);
+  font-size: .6rem;
+  color: var(--muted2);
+  letter-spacing: .1em;
+  text-align: center;
+}
+/* Scroll chevron */
+.hero__scroll {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .4rem;
+  font-family: var(--ff-mono);
+  font-size: .56rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  cursor: pointer;
+  text-decoration: none;
+}
+@keyframes chev-bounce {
+  0%,100% { transform: translateY(0); opacity: .5; }
+  50% { transform: translateY(5px); opacity: 1; }
+}
+.hero__scroll svg { animation: chev-bounce 2s ease-in-out infinite; }
+
+/* ═══════════════════════════════════════════════════════
+   FEATURES
+═══════════════════════════════════════════════════════ */
+.features-section {
+  padding: 8rem 0;
+  background: var(--bg);
+  position: relative;
+  z-index: 1;
+}
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 3.5rem;
+}
+/* CSS 3D tilt card */
+.feat-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--accent);
+  border-radius: var(--r-lg);
+  padding: 2.5rem 2rem;
+  transform-style: preserve-3d;
+  transform: perspective(1000px) rotateX(0deg) rotateY(0deg);
+  transition: transform .08s ease, box-shadow .2s ease;
+  will-change: transform;
+  overflow: hidden;
+  cursor: default;
+}
+.feat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(201,168,76,.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+.feat-card:hover {
+  box-shadow:
+    0 28px 60px rgba(0,0,0,.5),
+    0 0 0 1px rgba(201,168,76,.12),
+    inset 0 1px 0 rgba(201,168,76,.1);
+}
+.feat-card__icon {
+  width: 48px; height: 48px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  color: var(--accent);
+  transition: background .2s, border-color .2s;
+}
+.feat-card:hover .feat-card__icon {
+  background: rgba(201,168,76,.08);
+  border-color: rgba(201,168,76,.35);
+}
+.feat-card__title {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: 1.3rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text);
+  margin-bottom: .75rem;
+}
+.feat-card__body {
+  font-family: var(--ff-body);
+  font-size: .95rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+/* ═══════════════════════════════════════════════════════
+   STATS BAR
+═══════════════════════════════════════════════════════ */
+.stats-band {
+  position: relative;
+  z-index: 1;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+.stats-band__plate {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 3.5rem clamp(1.5rem, 5vw, 3.5rem);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  /* 3D industrial plate perspective */
+  transform: perspective(1200px) rotateX(2deg);
+  transform-origin: center bottom;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.03);
+}
+.stat-cell {
+  background: var(--surface);
+  padding: 2rem 2.5rem;
+  text-align: center;
+}
+.stat-cell__num {
+  font-family: var(--ff-display);
+  font-weight: 900;
+  font-size: clamp(2.4rem, 4vw, 3.5rem);
+  letter-spacing: .04em;
+  line-height: 1;
+  color: var(--accent);
+}
+.stat-cell__suffix {
+  font-size: .6em;
+  opacity: .8;
+}
+.stat-cell__label {
+  font-family: var(--ff-mono);
+  font-size: .62rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: .5rem;
+}
+
+/* ═══════════════════════════════════════════════════════
+   HOW IT WORKS
+═══════════════════════════════════════════════════════ */
+.how-section {
+  padding: 8rem 0;
+  background: var(--bg);
+  position: relative;
+  z-index: 1;
+}
+.how-flow {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin-top: 4rem;
+  align-items: start;
+}
+/* SVG dashed connectors */
+.how-svg {
+  position: absolute;
+  top: 32px;
+  left: calc(16.66% + 32px);
+  width: calc(66.66% - 64px);
+  height: 4px;
+  overflow: visible;
+  pointer-events: none;
+}
+.how-svg-path {
+  stroke: var(--border2);
+  stroke-width: 2;
+  stroke-dasharray: 8 5;
+  fill: none;
+}
+.how-svg-fill {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 8 5;
+  stroke-dashoffset: 1000;
+  fill: none;
+  transition: stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1);
+}
+.how-svg-fill.animated { stroke-dashoffset: 0; }
+
+.how-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 2rem;
+  position: relative;
+}
+.how-step__circle {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--border2);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 1.5rem;
+  /* 3D depth */
+  box-shadow:
+    0 6px 0 var(--bg),
+    0 8px 16px rgba(0,0,0,.4),
+    inset 0 1px 0 rgba(255,255,255,.05);
+  transition: border-color .3s, background .3s;
+  flex-shrink: 0;
+}
+.how-step__circle-inner {
+  font-family: var(--ff-display);
+  font-weight: 900;
+  font-size: 1.4rem;
+  letter-spacing: -.02em;
+  color: var(--muted2);
+  transition: color .3s;
+}
+.how-step.is-visible .how-step__circle {
+  border-color: var(--accent);
+  background: rgba(201,168,76,.06);
+}
+.how-step.is-visible .how-step__circle-inner { color: var(--accent); }
+.how-step.is-visible .how-step__circle {
+  box-shadow:
+    0 6px 0 var(--bg),
+    0 8px 20px rgba(0,0,0,.4),
+    0 0 0 8px rgba(201,168,76,.05),
+    inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+.how-step__title {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text);
+  margin-bottom: .6rem;
+}
+.how-step__body {
+  font-family: var(--ff-body);
+  font-size: .92rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PARTNERS MARQUEE
+═══════════════════════════════════════════════════════ */
+.partners-section {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 4rem 0;
+  overflow: hidden;
+}
+.partners-heading {
+  font-family: var(--ff-mono);
+  font-size: .62rem;
+  font-weight: 600;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+.marquee-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: .85rem;
+  overflow: hidden;
+}
+/* fade masks */
+.marquee-wrap::before,
+.marquee-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 8rem;
+  z-index: 2;
+  pointer-events: none;
+}
+.marquee-wrap::before { left: 0; background: linear-gradient(90deg, var(--surface), transparent); }
+.marquee-wrap::after  { right: 0; background: linear-gradient(-90deg, var(--surface), transparent); }
+
+.marquee-row {
+  display: flex;
+  width: max-content;
+  gap: .85rem;
+}
+.marquee-row--left  { animation: marquee-left  38s linear infinite; }
+.marquee-row--right { animation: marquee-right 42s linear infinite; }
+.marquee-row--left:hover,
+.marquee-row--right:hover { animation-play-state: paused; }
+
+@keyframes marquee-left  { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes marquee-right { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+
+.partner-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .2rem;
+  padding: .7rem 1.4rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  white-space: nowrap;
+  transition: border-color .25s, background .25s;
+  cursor: default;
+  min-width: 140px;
+}
+.partner-badge:hover {
+  border-color: var(--accent);
+  background: rgba(201,168,76,.04);
+}
+.partner-badge:hover .partner-badge__name { color: var(--accent); }
+.partner-badge__micro {
+  font-family: var(--ff-mono);
+  font-size: .52rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+.partner-badge__name {
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: .95rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color .25s;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SECTION INTRO (shared)
+═══════════════════════════════════════════════════════ */
+.sec-intro {
+  max-width: 600px;
+}
+.sec-intro__kicker {
+  font-family: var(--ff-mono);
+  font-size: .62rem;
+  font-weight: 600;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: .85rem;
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+}
+.sec-intro__kicker::before { content: ''; width: 28px; height: 1px; background: var(--accent); }
+.sec-intro__headline {
+  font-family: var(--ff-display);
+  font-weight: 900;
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  line-height: .95;
+  color: var(--text);
+}
+.sec-intro__body {
+  font-family: var(--ff-body);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--text2);
+  margin-top: .9rem;
+  line-height: 1.7;
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .features-grid { grid-template-columns: 1fr; max-width: 480px; margin-left: auto; margin-right: auto; }
+  .stats-band__plate { grid-template-columns: repeat(2,1fr); transform: none; }
+  .how-flow { grid-template-columns: 1fr; gap: 3rem; }
+  .how-svg { display: none; }
+}
+@media (max-width: 600px) {
+  .hero__form-row { flex-direction: column; }
+  .stats-band__plate { grid-template-columns: 1fr 1fr; transform: none; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ═══════════════════════════════════════════════════════
+     HERO
+═══════════════════════════════════════════════════════ -->
+<section class="hero" id="track">
+  <canvas id="globe-canvas" aria-hidden="true"></canvas>
+  <div class="hero__vignette"></div>
+
+  <div class="hero__content">
+    <div class="hero__eyebrow sr">Cargo Intelligence Platform</div>
+    <h1 class="hero__title sr sr-delay-1">
+      Track Your<br>
+      <span class="hero__title-accent">Shipment</span>
+    </h1>
+    <p class="hero__sub sr sr-delay-2">
+      Real-time visibility across every ocean lane, air corridor, and ground route on Earth — engineered for what cannot be late.
+    </p>
+
+    <div class="hero__form sr sr-delay-3">
+      <form method="POST" action="{% url 'tracking:home' %}">
+        {% csrf_token %}
+        <div class="hero__form-row">
+          <input
+            id="tracking-input"
+            type="text"
+            name="tracking_number"
+            class="hero__form-input"
+            placeholder="VT-2024-XXXXXX"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            maxlength="20"
+            aria-label="Tracking number"
+          />
+          <button type="submit" class="hero__form-btn">TRACK →</button>
+        </div>
+      </form>
+      <p class="hero__form-note">Format: VT-YYYY-XXXXXX · Case insensitive · No account required</p>
+    </div>
+  </div>
+
+  <a href="#features" class="hero__scroll" aria-label="Scroll down">
+    <span>Scroll</span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>
+  </a>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURES
+═══════════════════════════════════════════════════════ -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="sec-intro sr">
+      <div class="sec-intro__kicker">Platform Capabilities</div>
+      <h2 class="sec-intro__headline">Engineered<br>for Certainty</h2>
+      <p class="sec-intro__body">Three pillars that make Voss &amp; Thorne the standard for mission-critical cargo intelligence.</p>
+    </div>
+
+    <div class="features-grid" id="featuresGrid">
+
+      <!-- Card 1: Signal Tower -->
+      <div class="feat-card sr" data-tilt>
+        <div class="feat-card__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M4.9 4.9A10 10 0 0 0 2 12M19.1 4.9A10 10 0 0 1 22 12M7.76 7.76A6 6 0 0 0 6 12M16.24 7.76A6 6 0 0 1 18 12M12 12v.01"/>
+            <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+            <line x1="12" y1="13.5" x2="12" y2="20"/>
+            <line x1="9" y1="20" x2="15" y2="20"/>
+          </svg>
+        </div>
+        <h3 class="feat-card__title">Live Signal Network</h3>
+        <p class="feat-card__body">2.4 million tracking events logged daily across 2,400+ carrier integrations. Every checkpoint, port scan, and customs clearance transmitted in under 90 seconds.</p>
+      </div>
+
+      <!-- Card 2: Lightning -->
+      <div class="feat-card sr sr-delay-1" data-tilt>
+        <div class="feat-card__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <h3 class="feat-card__title">Instant Resolution</h3>
+        <p class="feat-card__body">Exception alerts surface in real time. Route deviations, customs holds, and temperature breaches trigger automated escalation before your team notices a delay.</p>
+      </div>
+
+      <!-- Card 3: Globe Grid -->
+      <div class="feat-card sr sr-delay-2" data-tilt>
+        <div class="feat-card__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            <line x1="2" y1="7" x2="22" y2="7" stroke-opacity=".5"/>
+            <line x1="2" y1="17" x2="22" y2="17" stroke-opacity=".5"/>
+          </svg>
+        </div>
+        <h3 class="feat-card__title">Global Compliance</h3>
+        <p class="feat-card__body">IATA, ADR, and 190+ national customs frameworks embedded in every workflow. Legal-grade audit trails archived for 7 years. Full provenance, zero gaps.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     STATS BAR
+═══════════════════════════════════════════════════════ -->
+<section class="stats-band" id="statsBand">
+  <div style="max-width:1280px;margin:0 auto;padding:2.5rem clamp(1.5rem,5vw,3.5rem);">
+    <div class="stats-band__plate">
+      <div class="stat-cell sr">
+        <div class="stat-cell__num" data-count="48" data-suffix="K+">0</div>
+        <div class="stat-cell__label">Active Shipments</div>
+      </div>
+      <div class="stat-cell sr sr-delay-1">
+        <div class="stat-cell__num" data-count="190" data-suffix="+">0</div>
+        <div class="stat-cell__label">Countries Served</div>
+      </div>
+      <div class="stat-cell sr sr-delay-2">
+        <div class="stat-cell__num" data-count="2.4" data-suffix="M">0</div>
+        <div class="stat-cell__label">Events / Day</div>
+      </div>
+      <div class="stat-cell sr sr-delay-3">
+        <div class="stat-cell__num" data-count="99.7" data-suffix="%">0</div>
+        <div class="stat-cell__label">Uptime SLA</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     HOW IT WORKS
+═══════════════════════════════════════════════════════ -->
+<section class="how-section" id="how">
+  <div class="container">
+    <div class="sec-intro sr">
+      <div class="sec-intro__kicker">The Process</div>
+      <h2 class="sec-intro__headline">From Origin<br>to Delivered</h2>
+    </div>
+
+    <div class="how-flow" id="howFlow">
+      <!-- SVG connectors (desktop) -->
+      <svg class="how-svg" viewBox="0 0 700 4" preserveAspectRatio="none" aria-hidden="true">
+        <path class="how-svg-path" d="M 0 2 H 700"/>
+        <path class="how-svg-fill" id="howSvgFill" d="M 0 2 H 700" stroke-dasharray="700" stroke-dashoffset="700"/>
+      </svg>
+
+      <div class="how-step sr">
+        <div class="how-step__circle">
+          <span class="how-step__circle-inner">01</span>
+        </div>
+        <h3 class="how-step__title">Book &amp; Register</h3>
+        <p class="how-step__body">Cargo is registered at origin. A unique VT tracking number is issued and attached to every document in the custody chain.</p>
+      </div>
+
+      <div class="how-step sr sr-delay-1">
+        <div class="how-step__circle">
+          <span class="how-step__circle-inner">02</span>
+        </div>
+        <h3 class="how-step__title">Live Checkpoints</h3>
+        <p class="how-step__body">Every port, hub, customs scan, and handover logs a timestamped event. Deviations surface instantly to operations and client dashboards.</p>
+      </div>
+
+      <div class="how-step sr sr-delay-2">
+        <div class="how-step__circle">
+          <span class="how-step__circle-inner">03</span>
+        </div>
+        <h3 class="how-step__title">Proof of Delivery</h3>
+        <p class="how-step__body">Final delivery is captured and timestamped. Compliance records are archived for 7 years, accessible any time via your tracking number.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     PARTNERS MARQUEE
+═══════════════════════════════════════════════════════ -->
+<section class="partners-section">
+  <p class="partners-heading sr">Trusted by Global Institutions</p>
+
+  <div class="marquee-wrap">
+    {% comment %}Row 1 — scrolls left (doubled for loop){% endcomment %}
+    <div class="marquee-row marquee-row--left">
+      {% for name in "HSBC,Standard Chartered,Citibank,Deutsche Bank,Barclays,JPMorgan Chase,BNP Paribas,UBS,Goldman Sachs,Société Générale,HSBC,Standard Chartered,Citibank,Deutsche Bank,Barclays,JPMorgan Chase,BNP Paribas,UBS,Goldman Sachs,Société Générale"|split:"," %}
+      <div class="partner-badge">
+        <span class="partner-badge__micro">Partner</span>
+        <span class="partner-badge__name">{{ name }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% comment %}Row 2 — scrolls right (offset start, doubled){% endcomment %}
+    <div class="marquee-row marquee-row--right">
+      {% for name in "Goldman Sachs,Société Générale,UBS,BNP Paribas,JPMorgan Chase,Barclays,Deutsche Bank,Citibank,Standard Chartered,HSBC,Goldman Sachs,Société Générale,UBS,BNP Paribas,JPMorgan Chase,Barclays,Deutsche Bank,Citibank,Standard Chartered,HSBC"|split:"," %}
+      <div class="partner-badge">
+        <span class="partner-badge__micro">Partner</span>
+        <span class="partner-badge__name">{{ name }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Three.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+'use strict';
+
+/* ── Auto-uppercase input ────────────────────────────── */
+var inp = document.getElementById('tracking-input');
+if (inp) {
+  inp.addEventListener('input', function () {
+    var p = this.selectionStart;
+    this.value = this.value.toUpperCase();
+    this.setSelectionRange(p, p);
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   THREE.JS GLOBE
+══════════════════════════════════════════════════════ */
+var canvas = document.getElementById('globe-canvas');
+if (canvas && window.THREE) {
+  var isMobile = window.innerWidth < 768;
+  var W = window.innerWidth, H = window.innerHeight;
+
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(W, H);
+  renderer.setClearColor(0x000000, 0);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 1000);
+  camera.position.set(0, 0, 3.2);
+
+  /* Starfield */
+  var starCount = isMobile ? 500 : 1400;
+  var starGeo = new THREE.BufferGeometry();
+  var starPos = new Float32Array(starCount * 3);
+  for (var i = 0; i < starCount * 3; i++) starPos[i] = (Math.random() - 0.5) * 60;
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  var starMat = new THREE.PointsMaterial({ color: 0x8888aa, size: 0.06, transparent: true, opacity: .6 });
+  scene.add(new THREE.Points(starGeo, starMat));
+
+  /* Globe sphere */
+  var globeGeo = new THREE.SphereGeometry(1, 48, 48);
+  var globeMat = new THREE.MeshPhongMaterial({
+    color: 0x0d0d1a,
+    emissive: 0x04040d,
+    shininess: 10,
+    wireframe: false,
+    transparent: true,
+    opacity: .95,
+  });
+  var globe = new THREE.Mesh(globeGeo, globeMat);
+  scene.add(globe);
+
+  /* Wireframe overlay */
+  var wireMat = new THREE.MeshBasicMaterial({ color: 0x1e1e35, wireframe: true, transparent: true, opacity: .18 });
+  var wireGlobe = new THREE.Mesh(new THREE.SphereGeometry(1.002, 24, 24), wireMat);
+  scene.add(wireGlobe);
+
+  /* Lighting */
+  scene.add(new THREE.AmbientLight(0x111122, 1));
+  var dirLight = new THREE.DirectionalLight(0xc9a84c, .6);
+  dirLight.position.set(2, 2, 2);
+  scene.add(dirLight);
+  var rimLight = new THREE.DirectionalLight(0x2d6be4, .3);
+  rimLight.position.set(-2, -1, -2);
+  scene.add(rimLight);
+
+  /* Util: lat/lon to 3D */
+  function latLon(lat, lon, r) {
+    var phi = (90 - lat) * Math.PI / 180;
+    var theta = (lon + 180) * Math.PI / 180;
+    return new THREE.Vector3(
+      -r * Math.sin(phi) * Math.cos(theta),
+       r * Math.cos(phi),
+       r * Math.sin(phi) * Math.sin(theta)
+    );
+  }
+
+  /* Route definitions [lat, lon] pairs */
+  var ROUTES = [
+    [[40.7, -74.0], [1.3, 103.8]],   // New York → Singapore
+    [[51.5, -0.1],  [25.2, 55.3]],   // London → Dubai
+    [[50.1, 8.7],   [-23.5, -46.6]], // Frankfurt → São Paulo
+    [[22.3, 114.2], [34.1, -118.2]], // Hong Kong → LA
+    [[35.7, 139.7], [52.4, 13.4]],  // Tokyo → Berlin
+    [[1.3, 103.8],  [55.8, 37.6]],  // Singapore → Moscow
+    [[-33.9, 151.2],[48.9, 2.4]],   // Sydney → Paris
+  ];
+
+  var GOLD   = 0xc9a84c;
+  var BLUE   = 0x2d6be4;
+  var routeColors = [GOLD, BLUE, GOLD, GOLD, BLUE, GOLD, BLUE];
+
+  var routeMeshes = [];
+
+  ROUTES.forEach(function (route, idx) {
+    var A = latLon(route[0][0], route[0][1], 1.01);
+    var B = latLon(route[1][0], route[1][1], 1.01);
+    var mid = A.clone().add(B).multiplyScalar(0.5).normalize().multiplyScalar(1.5);
+    var curve = new THREE.QuadraticBezierCurve3(A, mid, B);
+    var points = curve.getPoints(60);
+    var geo = new THREE.BufferGeometry().setFromPoints(points);
+    var col = routeColors[idx % routeColors.length];
+    var mat = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: .55 });
+    var line = new THREE.Line(geo, mat);
+    scene.add(line);
+
+    /* Endpoint glows */
+    [A, B].forEach(function (pos) {
+      var dotGeo = new THREE.SphereGeometry(.018, 8, 8);
+      var dotMat = new THREE.MeshBasicMaterial({ color: col });
+      var dot = new THREE.Mesh(dotGeo, dotMat);
+      dot.position.copy(pos);
+      scene.add(dot);
+    });
+
+    routeMeshes.push({ curve: curve, t: Math.random(), speed: .0008 + Math.random() * .0006, col: col });
+  });
+
+  /* Animated cargo dots */
+  var cargoDots = routeMeshes.map(function (r) {
+    var g = new THREE.SphereGeometry(.012, 8, 8);
+    var m = new THREE.MeshBasicMaterial({ color: r.col });
+    var mesh = new THREE.Mesh(g, m);
+    scene.add(mesh);
+    return { mesh: mesh, route: r };
+  });
+
+  /* Animate */
+  var pivot = new THREE.Group();
+  pivot.add(globe);
+  pivot.add(wireGlobe);
+  scene.add(pivot);
+  // move existing children into pivot's coordinate space
+  // (routes are in world space, globe rotates separately — that's fine aesthetically)
+
+  var clock = new THREE.Clock();
+  function animate() {
+    requestAnimationFrame(animate);
+    var delta = clock.getDelta();
+
+    /* Slow globe rotation */
+    globe.rotation.y += .0012;
+    wireGlobe.rotation.y += .0012;
+
+    /* Move cargo dots */
+    cargoDots.forEach(function (cd) {
+      cd.route.t += cd.route.speed;
+      if (cd.route.t > 1) cd.route.t = 0;
+      var pos = cd.route.curve.getPoint(cd.route.t);
+      cd.mesh.position.copy(pos);
+    });
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  /* Resize */
+  window.addEventListener('resize', function () {
+    W = window.innerWidth; H = window.innerHeight;
+    camera.aspect = W / H;
+    camera.updateProjectionMatrix();
+    renderer.setSize(W, H);
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   CSS 3D TILT ON FEATURE CARDS
+══════════════════════════════════════════════════════ */
+document.querySelectorAll('[data-tilt]').forEach(function (card) {
+  card.addEventListener('mousemove', function (e) {
+    var rect = card.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    var dx = (e.clientX - cx) / (rect.width / 2);
+    var dy = (e.clientY - cy) / (rect.height / 2);
+    var rx = dy * -8;
+    var ry = dx * 8;
+    card.style.transform = 'perspective(1000px) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg) translateZ(6px)';
+  });
+  card.addEventListener('mouseleave', function () {
+    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0)';
+  });
+});
+
+/* ══════════════════════════════════════════════════════
+   STATS COUNTUP
+══════════════════════════════════════════════════════ */
+function animateCount(el) {
+  var target = parseFloat(el.dataset.count);
+  var suffix = el.dataset.suffix || '';
+  var isDecimal = String(target).indexOf('.') !== -1;
+  var duration = 1800;
+  var start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    var progress = Math.min((ts - start) / duration, 1);
+    var eased = 1 - Math.pow(1 - progress, 3);
+    var current = target * eased;
+    el.textContent = (isDecimal ? current.toFixed(1) : Math.floor(current)) + suffix;
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = (isDecimal ? target.toFixed(1) : target) + suffix;
+  }
+  requestAnimationFrame(step);
+}
+
+var countObserver = new IntersectionObserver(function (entries) {
+  entries.forEach(function (e) {
+    if (e.isIntersecting) {
+      animateCount(e.target);
+      countObserver.unobserve(e.target);
+    }
+  });
+}, { threshold: .5 });
+document.querySelectorAll('[data-count]').forEach(function (el) {
+  countObserver.observe(el);
+});
+
+/* ══════════════════════════════════════════════════════
+   HOW-IT-WORKS SVG DRAW + STEP HIGHLIGHTS
+══════════════════════════════════════════════════════ */
+var howFill = document.getElementById('howSvgFill');
+if (howFill) {
+  var howObserver = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        howFill.classList.add('animated');
+        document.querySelectorAll('.how-step').forEach(function (s) {
+          s.classList.add('is-visible');
+        });
+        howObserver.disconnect();
+      }
+    });
+  }, { threshold: .3 });
+  var howFlow = document.getElementById('howFlow');
+  if (howFlow) howObserver.observe(howFlow);
+}
+
+})();
+</script>
+{% endblock %}
