@@ -162,6 +162,20 @@ class Command(BaseCommand):
         self.stdout.write(self.style.HTTP_INFO("  └─────────────────────────────────────────────────────────────┘"))
         self.stdout.write("")
 
+        # Skip if data already exists (safe for repeated deploys)
+        if not options["flush"] and Shipment.objects.exists():
+            existing = Shipment.objects.values_list("tracking_number", flat=True).order_by("created_at")
+            self.stdout.write(self.style.WARNING("  ⚠  Shipments already exist — skipping seed. Pass --flush to re-seed."))
+            self.stdout.write("")
+            self.stdout.write(self.style.HTTP_INFO("  ┌─────────────────────────────────────────────────────────────┐"))
+            self.stdout.write(self.style.HTTP_INFO("  │  EXISTING TRACKING NUMBERS                                  │"))
+            self.stdout.write(self.style.HTTP_INFO("  ├─────────────────────────────────────────────────────────────┤"))
+            for tn in existing:
+                self.stdout.write(self.style.HTTP_INFO(f"  │  {tn:<57}│"))
+            self.stdout.write(self.style.HTTP_INFO("  └─────────────────────────────────────────────────────────────┘"))
+            self.stdout.write("")
+            return
+
         tracking_numbers = []
 
         for i, status in enumerate(statuses):
