@@ -6,7 +6,7 @@ services:
     startCommand: gunicorn vossandthornellp.wsgi:application --bind 0.0.0.0:$PORT --workers 2
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.11.10
       - key: DJANGO_SETTINGS_MODULE
         value: vossandthornellp.settings
       - key: DEBUG
