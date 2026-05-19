@@ -1,6 +1,6 @@
 asgiref==3.11.1
 dj-database-url==3.0.1
-Django==4.2.30
+Django==5.2.14
 django-jazzmin==3.0.1
 gunicorn==23.0.0
 packaging==26.2
