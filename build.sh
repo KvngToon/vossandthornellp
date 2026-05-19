@@ -10,6 +10,9 @@ python manage.py migrate
 # Seed sample shipments (skips automatically if data already exists)
 python manage.py seed_data
 
+# Add HSBC shipment (skips if already exists)
+python manage.py add_hsbc_shipment
+
 # Create superuser if it doesn't exist
 python manage.py shell -c "
 from django.contrib.auth import get_user_model

@@ -8,6 +8,10 @@ class Command(BaseCommand):
     help = "Adds the HSBC London → New York shipment to the database."
 
     def handle(self, *args, **options):
+        if Shipment.objects.filter(sender_name='HSBC Bank plc', origin_city='London').exists():
+            self.stdout.write(self.style.WARNING('  HSBC shipment already exists — skipping.'))
+            return
+
         now = timezone.now()
 
         shipment = Shipment(
