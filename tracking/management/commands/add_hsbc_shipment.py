@@ -44,14 +44,16 @@ class Command(BaseCommand):
             ( 0, 'In Transit',              'International Airspace',          'Cargo en route over North Atlantic. Flight on schedule. No anomalies reported.'),
         ]
 
-        for offset, status, location, desc in events:
-            ShipmentEvent.objects.create(
+        ShipmentEvent.objects.bulk_create([
+            ShipmentEvent(
                 shipment=shipment,
                 status=status,
                 location=location,
                 description=desc,
                 timestamp=now + timedelta(days=offset, hours=9),
             )
+            for offset, status, location, desc in events
+        ])
 
         self.stdout.write(self.style.SUCCESS(f'\n  Tracking Number : {shipment.tracking_number}'))
         self.stdout.write(self.style.SUCCESS(f'  Route           : {shipment.origin_city} → {shipment.destination_city}'))

@@ -318,6 +318,179 @@ def send_status_update_email(shipment, old_status):
         logger.error('Failed to send status update email for %s: %s', shipment.tracking_number, exc)
 
 
+def get_event_update_html(event):
+    shipment = event.shipment
+    eta = (shipment.estimated_delivery.strftime('%B %d, %Y')
+           if shipment.estimated_delivery else 'To be confirmed')
+    status_color = STATUS_COLORS.get(shipment.status, '#6b7280')
+
+    ts = event.timestamp.strftime('%d %b %Y, %H:%M UTC') if event.timestamp else ''
+
+    body = f"""
+    <tr>
+      <td style="background:#ffffff;padding:0;">
+
+        <!-- Gold top band -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="background:#07070d;padding:32px 48px 28px;">
+            <p style="margin:0;font-family:Arial,sans-serif;font-size:9px;letter-spacing:5px;
+                      color:#c9a84c;text-transform:uppercase;">Shipment Update</p>
+            <p style="margin:10px 0 0;font-family:Georgia,serif;font-size:26px;
+                      color:#dde0ee;font-weight:normal;line-height:1.2;">
+              Your shipment has<br>a new update.
+            </p>
+          </td></tr>
+        </table>
+
+        <!-- Location banner -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="background:#0e0e18;padding:20px 48px;border-top:1px solid #1f1f35;
+                       border-bottom:1px solid #1f1f35;">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding-right:14px;vertical-align:middle;">
+                    <!-- Pin icon -->
+                    <table cellpadding="0" cellspacing="0">
+                      <tr><td style="width:32px;height:32px;background:rgba(201,168,76,.12);
+                                     border:1px solid rgba(201,168,76,.3);border-radius:50%;
+                                     text-align:center;vertical-align:middle;font-size:14px;">
+                        &#x1F4CD;
+                      </td></tr>
+                    </table>
+                  </td>
+                  <td style="vertical-align:middle;">
+                    <p style="margin:0;font-family:Arial,sans-serif;font-size:9px;letter-spacing:3px;
+                              color:#555570;text-transform:uppercase;">Current Location</p>
+                    <p style="margin:4px 0 0;font-family:Georgia,serif;font-size:18px;
+                              color:#dde0ee;line-height:1.2;">{event.location}</p>
+                    {'<p style="margin:4px 0 0;font-family:Arial,sans-serif;font-size:10px;color:#555570;">' + ts + '</p>' if ts else ''}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Body -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding:36px 48px 44px;">
+
+            <!-- Receiver greeting -->
+            <p style="margin:0 0 24px;font-family:Arial,sans-serif;font-size:14px;
+                      color:#55556a;line-height:1.7;">Dear {shipment.receiver_name},</p>
+
+            <!-- Event status badge -->
+            <table cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+              <tr>
+                <td style="background:{status_color};border-radius:2px;padding:6px 16px;">
+                  <p style="margin:0;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;
+                            letter-spacing:3px;text-transform:uppercase;color:#ffffff;">
+                    {event.status}
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Event description -->
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#f7f7f2;border-left:3px solid #c9a84c;margin-bottom:28px;">
+              <tr><td style="padding:18px 22px;">
+                <p style="margin:0;font-family:Georgia,serif;font-size:15px;
+                          color:#1a1a2e;line-height:1.75;">{event.description}</p>
+              </td></tr>
+            </table>
+
+            <!-- Shipment summary -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding:11px 0;border-bottom:1px solid #ebebе8;
+                           font-family:Arial,sans-serif;font-size:10px;color:#999990;
+                           letter-spacing:1px;text-transform:uppercase;width:38%;vertical-align:top;">
+                  Tracking Number
+                </td>
+                <td style="padding:11px 0 11px 16px;border-bottom:1px solid #ebebе8;
+                           font-family:Georgia,serif;font-size:14px;color:#1a1a2e;vertical-align:top;">
+                  <strong style="letter-spacing:2px;">{shipment.tracking_number}</strong>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:11px 0;border-bottom:1px solid #ebebе8;
+                           font-family:Arial,sans-serif;font-size:10px;color:#999990;
+                           letter-spacing:1px;text-transform:uppercase;vertical-align:top;">
+                  Route
+                </td>
+                <td style="padding:11px 0 11px 16px;border-bottom:1px solid #ebebе8;
+                           font-family:Georgia,serif;font-size:14px;color:#1a1a2e;vertical-align:top;">
+                  {shipment.origin_city}, {shipment.origin_country}
+                  &rarr;
+                  {shipment.destination_city}, {shipment.destination_country}
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:11px 0;border-bottom:1px solid #ebebе8;
+                           font-family:Arial,sans-serif;font-size:10px;color:#999990;
+                           letter-spacing:1px;text-transform:uppercase;vertical-align:top;">
+                  Shipment Status
+                </td>
+                <td style="padding:11px 0 11px 16px;border-bottom:1px solid #ebebе8;
+                           vertical-align:top;">
+                  <span style="display:inline-block;padding:3px 10px;background:{status_color};
+                               border-radius:2px;font-family:Arial,sans-serif;font-size:10px;
+                               font-weight:bold;letter-spacing:2px;text-transform:uppercase;
+                               color:#ffffff;">
+                    {shipment.status}
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:11px 0;font-family:Arial,sans-serif;font-size:10px;
+                           color:#999990;letter-spacing:1px;text-transform:uppercase;vertical-align:top;">
+                  Estimated Delivery
+                </td>
+                <td style="padding:11px 0 11px 16px;font-family:Georgia,serif;
+                           font-size:14px;color:#1a1a2e;vertical-align:top;">
+                  {eta}
+                </td>
+              </tr>
+            </table>
+
+            {_track_button(shipment.tracking_number)}
+          </td></tr>
+        </table>
+
+      </td>
+    </tr>"""
+
+    return _wrap(_header() + body + _footer())
+
+
+def send_event_update_email(event):
+    """Send a shipment event update email to the receiver."""
+    key = _get_api_key()
+    if not key or not event.shipment.receiver_email:
+        return
+    resend.api_key = key
+    try:
+        resend.Emails.send({
+            'from': FROM_ADDRESS,
+            'to': [event.shipment.receiver_email],
+            'subject': f'Shipment {event.shipment.tracking_number} — Update: {event.status}',
+            'html': get_event_update_html(event),
+        })
+        logger.info(
+            'Event update email sent → %s (%s | %s)',
+            event.shipment.receiver_email,
+            event.shipment.tracking_number,
+            event.status,
+        )
+    except Exception as exc:
+        logger.error(
+            'Failed to send event update email for %s: %s',
+            event.shipment.tracking_number, exc,
+        )
+
+
 def send_contact_enquiry_email(name, organisation, email, subject, message):
     key = _get_api_key()
     if not key:
