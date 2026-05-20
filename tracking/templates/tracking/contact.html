@@ -1,0 +1,436 @@
+{% extends 'tracking/base.html' %}
+
+{% block title %}Contact — Voss &amp; Thorne LLP{% endblock %}
+{% block body_class %}page-contact{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Hero ─────────────────────────────────────────────── */
+  .contact-hero {
+    position: relative;
+    padding: clamp(5rem, 12vw, 9rem) 0 clamp(3rem, 6vw, 5rem);
+    overflow: hidden;
+  }
+  .contact-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 80% 40%, rgba(201,168,76,.06) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 10% 80%, rgba(45,107,228,.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .contact-hero__eyebrow {
+    font-family: var(--ff-mono);
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: 1.5rem;
+  }
+  .contact-hero__eyebrow::before {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--accent);
+  }
+  .contact-hero__title {
+    font-family: var(--ff-display);
+    font-weight: 900;
+    font-size: clamp(3.5rem, 9vw, 7.5rem);
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    line-height: .92;
+    color: var(--text);
+    margin-bottom: 1.5rem;
+  }
+  .contact-hero__title em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .contact-hero__sub {
+    font-family: var(--ff-body);
+    font-style: italic;
+    font-size: clamp(1rem, 2.2vw, 1.25rem);
+    color: var(--text2);
+    max-width: 540px;
+    line-height: 1.65;
+  }
+
+  /* ── Layout ────────────────────────────────────────────── */
+  .contact-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 4rem;
+    padding-bottom: 7rem;
+    align-items: start;
+  }
+
+  /* ── Sidebar ────────────────────────────────────────────── */
+  .contact-sidebar {
+    position: sticky;
+    top: calc(var(--nav-h) + 2rem);
+  }
+  .contact-info-block {
+    margin-bottom: 2.5rem;
+  }
+  .contact-info-block__label {
+    font-family: var(--ff-mono);
+    font-size: .6rem;
+    font-weight: 600;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: .6rem;
+  }
+  .contact-info-block__value {
+    font-family: var(--ff-body);
+    font-size: 1rem;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+  .contact-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 2rem 0;
+  }
+  .contact-offices {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .contact-office__city {
+    font-family: var(--ff-display);
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .contact-office__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .contact-office__role {
+    font-family: var(--ff-mono);
+    font-size: .65rem;
+    color: var(--muted);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-top: .2rem;
+  }
+
+  /* ── Form card ──────────────────────────────────────────── */
+  .contact-form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    padding: clamp(2rem, 5vw, 3rem);
+    position: relative;
+    overflow: hidden;
+  }
+  .contact-form-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+      transparent, var(--accent-lo), var(--accent), var(--accent-lo), transparent);
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+  .form-grid .form-group--full { grid-column: 1 / -1; }
+
+  .form-group { display: flex; flex-direction: column; gap: .5rem; }
+  .form-label {
+    font-family: var(--ff-mono);
+    font-size: .62rem;
+    font-weight: 600;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .form-label span { color: var(--accent); margin-left: .15rem; }
+
+  textarea.vt-input {
+    resize: vertical;
+    min-height: 140px;
+    line-height: 1.6;
+  }
+
+  .form-submit {
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .form-submit__note {
+    font-family: var(--ff-mono);
+    font-size: .62rem;
+    color: var(--muted2);
+    letter-spacing: .06em;
+    line-height: 1.6;
+  }
+
+  /* Select styling */
+  select.vt-input {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555570' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* ── Status states ──────────────────────────────────────── */
+  .contact-success {
+    text-align: center;
+    padding: 3rem 2rem;
+  }
+  .contact-success__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(62,207,142,.1);
+    border: 1px solid rgba(62,207,142,.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+  }
+  .contact-success__title {
+    font-family: var(--ff-display);
+    font-weight: 900;
+    font-size: 2rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--success);
+    margin-bottom: .75rem;
+  }
+  .contact-success__msg {
+    font-family: var(--ff-body);
+    font-style: italic;
+    font-size: 1.05rem;
+    color: var(--text2);
+    line-height: 1.65;
+    max-width: 420px;
+    margin: 0 auto 2rem;
+  }
+  .contact-error-banner {
+    background: rgba(232,69,69,.08);
+    border: 1px solid rgba(232,69,69,.25);
+    border-radius: var(--r);
+    padding: .85rem 1.1rem;
+    font-family: var(--ff-mono);
+    font-size: .75rem;
+    color: var(--accent3);
+    letter-spacing: .04em;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .contact-layout {
+      grid-template-columns: 1fr;
+      gap: 3rem;
+    }
+    .contact-sidebar {
+      position: static;
+    }
+  }
+  @media (max-width: 580px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ── Hero ──────────────────────────────────────────────────── -->
+<section class="contact-hero">
+  <div class="container">
+    <p class="contact-hero__eyebrow sr">Get in Touch</p>
+    <h1 class="contact-hero__title sr sr-delay-1">
+      Let's<br><em>Talk</em><br>Business
+    </h1>
+    <p class="contact-hero__sub sr sr-delay-2">
+      We work exclusively with organisations requiring enterprise-grade cargo solutions.
+      Submit your enquiry and our operations team will respond within one business day.
+    </p>
+  </div>
+</section>
+
+<!-- ── Main layout ───────────────────────────────────────────── -->
+<section>
+  <div class="container">
+    <div class="contact-layout">
+
+      <!-- Sidebar -->
+      <aside class="contact-sidebar sr">
+        <div class="contact-info-block">
+          <div class="contact-info-block__label">Response Time</div>
+          <div class="contact-info-block__value">Within one business day for all commercial enquiries. Urgent operational matters are handled 24 / 7.</div>
+        </div>
+
+        <div class="contact-info-block">
+          <div class="contact-info-block__label">Who We Work With</div>
+          <div class="contact-info-block__value">Financial institutions, multinational corporations, government agencies, pharmaceutical companies, and high-value manufacturers.</div>
+        </div>
+
+        <div class="contact-divider"></div>
+
+        <div class="contact-info-block__label" style="margin-bottom:1rem;">Our Offices</div>
+        <div class="contact-offices">
+          <div>
+            <div class="contact-office__city">
+              <span class="contact-office__dot"></span>New York
+            </div>
+            <div class="contact-office__role">Global Headquarters</div>
+          </div>
+          <div>
+            <div class="contact-office__city">
+              <span class="contact-office__dot" style="background:var(--accent2)"></span>London
+            </div>
+            <div class="contact-office__role">EMEA Operations</div>
+          </div>
+          <div>
+            <div class="contact-office__city">
+              <span class="contact-office__dot" style="background:var(--success)"></span>Singapore
+            </div>
+            <div class="contact-office__role">APAC Operations</div>
+          </div>
+        </div>
+
+        <div class="contact-divider"></div>
+
+        <div class="contact-info-block__label" style="margin-bottom:.6rem;">Already a Client?</div>
+        <div class="contact-info-block__value" style="font-size:.9rem;">
+          Use your tracking number on the <a href="{% url 'tracking:home' %}#track" style="color:var(--accent);">home page</a> to monitor your shipment in real time.
+        </div>
+      </aside>
+
+      <!-- Form card -->
+      <div class="contact-form-card sr sr-delay-1">
+
+        {% if sent %}
+          <div class="contact-success">
+            <div class="contact-success__icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div class="contact-success__title">Enquiry Received</div>
+            <p class="contact-success__msg">
+              Thank you. Your enquiry has been securely transmitted to our operations team.
+              We will respond to <strong>{{ request.POST.email }}</strong> within one business day.
+            </p>
+            <a href="{% url 'tracking:home' %}" class="btn btn-outline-gold">Return Home</a>
+          </div>
+
+        {% elif failed %}
+          <div class="contact-error-banner">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Transmission failed — please try again or contact us directly.
+          </div>
+          {% include 'tracking/_contact_form.html' %}
+
+        {% else %}
+          {% if error %}
+            <div class="contact-error-banner">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              {{ error }}
+            </div>
+          {% endif %}
+
+          <p class="t-label" style="margin-bottom:1.75rem;">Secure Enquiry Form</p>
+
+          <form method="post" action="{% url 'tracking:contact' %}" novalidate>
+            {% csrf_token %}
+            <div class="form-grid">
+
+              <div class="form-group">
+                <label class="form-label" for="name">Full Name <span>*</span></label>
+                <input class="vt-input" type="text" id="name" name="name"
+                       placeholder="Jane Thornton" required
+                       value="{{ request.POST.name|default:'' }}">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="organisation">Organisation <span>*</span></label>
+                <input class="vt-input" type="text" id="organisation" name="organisation"
+                       placeholder="Acme Corporation Ltd."
+                       required value="{{ request.POST.organisation|default:'' }}">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="email">Business Email <span>*</span></label>
+                <input class="vt-input" type="email" id="email" name="email"
+                       placeholder="j.thornton@acmecorp.com"
+                       required value="{{ request.POST.email|default:'' }}">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="subject">Nature of Enquiry <span>*</span></label>
+                <select class="vt-input" id="subject" name="subject" required>
+                  <option value="" disabled {% if not request.POST.subject %}selected{% endif %}>Select a subject</option>
+                  <option value="New Business — Freight Quote" {% if request.POST.subject == 'New Business — Freight Quote' %}selected{% endif %}>New Business — Freight Quote</option>
+                  <option value="Existing Shipment — Issue" {% if request.POST.subject == 'Existing Shipment — Issue' %}selected{% endif %}>Existing Shipment — Issue</option>
+                  <option value="Partnership &amp; Commercial" {% if request.POST.subject == 'Partnership & Commercial' %}selected{% endif %}>Partnership &amp; Commercial</option>
+                  <option value="Customs &amp; Compliance" {% if request.POST.subject == 'Customs & Compliance' %}selected{% endif %}>Customs &amp; Compliance</option>
+                  <option value="Special Cargo Services" {% if request.POST.subject == 'Special Cargo Services' %}selected{% endif %}>Special Cargo Services</option>
+                  <option value="Other" {% if request.POST.subject == 'Other' %}selected{% endif %}>Other</option>
+                </select>
+              </div>
+
+              <div class="form-group form-group--full">
+                <label class="form-label" for="message">Message <span>*</span></label>
+                <textarea class="vt-input" id="message" name="message"
+                          placeholder="Please describe your requirements, cargo details, origin and destination, and any specific handling needs…"
+                          required>{{ request.POST.message|default:'' }}</textarea>
+              </div>
+
+            </div>
+
+            <div class="form-submit">
+              <button type="submit" class="btn btn-gold">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+                Send Enquiry
+              </button>
+              <p class="form-submit__note">
+                Encrypted transmission.<br>
+                Your data is never shared with third parties.
+              </p>
+            </div>
+          </form>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

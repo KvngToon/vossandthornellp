@@ -27,3 +27,21 @@ def track_shipment(request, tracking_number):
 
 def about(request):
     return render(request, 'tracking/about.html')
+
+
+def contact(request):
+    if request.method == 'POST':
+        name         = request.POST.get('name', '').strip()
+        organisation = request.POST.get('organisation', '').strip()
+        email        = request.POST.get('email', '').strip()
+        subject      = request.POST.get('subject', '').strip()
+        message      = request.POST.get('message', '').strip()
+
+        if name and organisation and email and subject and message:
+            from tracking.emails import send_contact_enquiry_email
+            sent = send_contact_enquiry_email(name, organisation, email, subject, message)
+            return render(request, 'tracking/contact.html', {'sent': sent, 'failed': not sent})
+
+        return render(request, 'tracking/contact.html', {'error': 'Please fill in all fields.'})
+
+    return render(request, 'tracking/contact.html')

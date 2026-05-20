@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib import messages
 from .models import Shipment, ShipmentEvent
 
 
@@ -10,6 +11,36 @@ class ShipmentEventInline(admin.TabularInline):
 
 @admin.register(Shipment)
 class ShipmentAdmin(admin.ModelAdmin):
+    actions = ['action_send_confirmation_email', 'action_send_status_email']
+
+    def action_send_confirmation_email(self, request, queryset):
+        from tracking.emails import send_shipment_created_email
+        sent, skipped = 0, 0
+        for shipment in queryset:
+            if shipment.receiver_email:
+                send_shipment_created_email(shipment)
+                sent += 1
+            else:
+                skipped += 1
+        self.message_user(request, f'Confirmation email sent to {sent} receiver(s).', messages.SUCCESS)
+        if skipped:
+            self.message_user(request, f'{skipped} shipment(s) skipped — no receiver email.', messages.WARNING)
+    action_send_confirmation_email.short_description = 'Send booking confirmation email to receiver'
+
+    def action_send_status_email(self, request, queryset):
+        from tracking.emails import send_status_update_email
+        sent, skipped = 0, 0
+        for shipment in queryset:
+            if shipment.receiver_email:
+                send_status_update_email(shipment, shipment.status)
+                sent += 1
+            else:
+                skipped += 1
+        self.message_user(request, f'Status update email sent to {sent} receiver(s).', messages.SUCCESS)
+        if skipped:
+            self.message_user(request, f'{skipped} shipment(s) skipped — no receiver email.', messages.WARNING)
+    action_send_status_email.short_description = 'Send current status update email to receiver'
+
     list_display = [
         'tracking_number', 'sender_name', 'receiver_name',
         'origin_city', 'destination_city', 'cargo_type',

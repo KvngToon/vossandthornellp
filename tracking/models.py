@@ -59,6 +59,10 @@ class Shipment(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_status = self.status
+
     def __str__(self):
         return f'{self.tracking_number} — {self.sender_name} → {self.receiver_name}'
 
@@ -67,14 +71,30 @@ class Shipment(models.Model):
         suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
         return f'VT-{year}-{suffix}'
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, skip_email=False, **kwargs):
+        is_new = not self.pk
+        old_status = self._original_status
+
         if not self.tracking_number:
             candidate = self._generate_tracking_number()
-            # Retry on the rare collision
             while Shipment.objects.filter(tracking_number=candidate).exists():
                 candidate = self._generate_tracking_number()
             self.tracking_number = candidate
+
         super().save(*args, **kwargs)
+
+        if not skip_email:
+            try:
+                from tracking.emails import send_shipment_created_email, send_status_update_email
+                if is_new and self.receiver_email:
+                    send_shipment_created_email(self)
+                elif not is_new and self.status != old_status and self.receiver_email:
+                    send_status_update_email(self, old_status)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).error('Email dispatch error for %s: %s', self.tracking_number, exc)
+
+        self._original_status = self.status
 
 
 class ShipmentEvent(models.Model):

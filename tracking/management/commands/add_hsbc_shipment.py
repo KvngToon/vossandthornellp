@@ -33,7 +33,7 @@ class Command(BaseCommand):
             estimated_delivery=(now + timedelta(days=3)).date(),
             notes='Inter-branch trade finance documents. Priority handling. Tamper-evident packaging required.',
         )
-        shipment.save()
+        shipment.save(skip_email=True)
 
         events = [
             (-4, 'Shipment Booked',         'London, United Kingdom',          'Booking confirmed. Trade finance documentation package sealed and registered. Reference: HSBC-LON-2024-0892.'),

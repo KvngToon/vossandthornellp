@@ -778,6 +778,10 @@
        class="nav-overlay__item {% if request.resolver_match.url_name == 'about' %}is-active{% endif %}">
       <span class="nav-overlay__counter">03</span>About
     </a>
+    <a href="{% url 'tracking:contact' %}"
+       class="nav-overlay__item {% if request.resolver_match.url_name == 'contact' %}is-active{% endif %}">
+      <span class="nav-overlay__counter">04</span>Contact
+    </a>
     <p class="nav-overlay__footer">Voss &amp; Thorne LLP — Cargo Intelligence Platform</p>
   </div>
 
@@ -807,6 +811,12 @@
         <a href="{% url 'tracking:about' %}"
            class="nav-links__item {% if request.resolver_match.url_name == 'about' %}is-active{% endif %}">
           About
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'tracking:contact' %}"
+           class="nav-links__item {% if request.resolver_match.url_name == 'contact' %}is-active{% endif %}">
+          Contact
         </a>
       </li>
       <li>
@@ -865,12 +875,8 @@
         <div class="footer-col">
           <div class="footer-col__heading">Contact</div>
           <div class="footer-contact-item">
-            <span class="footer-contact-label">Operations</span>
-            <a href="tel:+18005555000" class="footer-contact-value">+1 (800) 555-5000</a>
-          </div>
-          <div class="footer-contact-item">
-            <span class="footer-contact-label">Email</span>
-            <a href="mailto:ops@vossthorne.com" class="footer-contact-value">ops@vossthorne.com</a>
+            <span class="footer-contact-label">Enquiries</span>
+            <span class="footer-contact-value">For all commercial and operational enquiries, use our secure contact form.</span>
           </div>
           <div class="footer-contact-item">
             <span class="footer-contact-label">Hours</span>
@@ -880,6 +886,9 @@
             <span class="footer-contact-label">HQ</span>
             <span class="footer-contact-value">New York · London · Singapore</span>
           </div>
+          <a href="{% url 'tracking:contact' %}" style="display:inline-flex;align-items:center;gap:.5rem;margin-top:1.25rem;padding:.55rem 1.1rem;border:1px solid var(--accent);border-radius:2px;font-family:var(--ff-mono);font-size:.68rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);transition:background .2s,color .2s;">
+            Get in Touch →
+          </a>
         </div>
 
       </div>
