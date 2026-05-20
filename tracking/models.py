@@ -88,7 +88,7 @@ class Shipment(models.Model):
                 from tracking.emails import send_shipment_created_email, send_status_update_email
                 if is_new and self.receiver_email:
                     send_shipment_created_email(self)
-                elif not is_new and self.status != old_status and self.receiver_email:
+                elif not is_new and self.receiver_email:
                     send_status_update_email(self, old_status)
             except Exception as exc:
                 import logging
