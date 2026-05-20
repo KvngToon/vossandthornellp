@@ -213,7 +213,7 @@ class Command(BaseCommand):
                 estimated_delivery=eta,
                 notes=CARGO_NOTES[i],
             )
-            shipment.save(skip_email=True)  # seeded data — suppress notification emails
+            shipment.save()
             tracking_numbers.append(shipment.tracking_number)
 
             # Build timeline events for this shipment

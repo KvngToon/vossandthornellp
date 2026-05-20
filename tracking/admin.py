@@ -13,6 +13,36 @@ class ShipmentEventInline(admin.TabularInline):
 class ShipmentAdmin(admin.ModelAdmin):
     actions = ['action_send_confirmation_email', 'action_send_status_email']
 
+    # ── Email: capture pre-save status before anything changes ────
+    def save_model(self, request, obj, form, change):
+        if change:
+            try:
+                obj._pre_save_status = Shipment.objects.values_list(
+                    'status', flat=True).get(pk=obj.pk)
+            except Shipment.DoesNotExist:
+                obj._pre_save_status = obj.status
+        else:
+            obj._pre_save_status = None   # new shipment
+        super().save_model(request, obj, form, change)
+
+    # ── Email: fires AFTER all inline events are saved ─────────────
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        obj = form.instance
+        old_status = getattr(obj, '_pre_save_status', None)
+        try:
+            from tracking.emails import send_shipment_created_email, send_status_update_email
+            if old_status is None and obj.receiver_email:
+                # Brand-new shipment
+                send_shipment_created_email(obj)
+            elif old_status is not None and obj.status != old_status and obj.receiver_email:
+                # Status changed — email fires after latest event is already saved
+                send_status_update_email(obj, old_status)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error('Admin email dispatch error for %s: %s', obj.tracking_number, exc)
+
+    # ── Manual bulk actions ────────────────────────────────────────
     def action_send_confirmation_email(self, request, queryset):
         from tracking.emails import send_shipment_created_email
         sent, skipped = 0, 0
