@@ -146,6 +146,68 @@ def _fetch_full_email(email_id):
         return None
 
 
+def _list_received_email_ids(limit=100, max_pages=50):
+    """Yields (message_id, resend_id) for every email Resend has recorded as
+    received, oldest data first as the API returns it. Used to find the
+    resend_id for messages we filed before we started fetching full content,
+    since we only stored the RFC Message-ID at the time, not Resend's id."""
+    api_key = getattr(settings, 'RESEND_API_KEY', '')
+    if not api_key:
+        return
+    headers = {'Authorization': f'Bearer {api_key}'}
+    cursor = None
+    for _ in range(max_pages):
+        params = {'limit': limit}
+        if cursor:
+            params['after'] = cursor
+        try:
+            response = requests.get(f'{RESEND_API_BASE}/emails/receiving', headers=headers, params=params, timeout=15)
+            response.raise_for_status()
+            payload = response.json()
+        except Exception as exc:
+            logger.error('Failed to list received emails from Resend: %s', exc)
+            return
+        data = payload.get('data') or []
+        for item in data:
+            yield item.get('message_id'), item.get('id')
+        if not payload.get('has_more') or not data:
+            return
+        cursor = data[-1].get('id')
+
+
+def backfill_all_inbound_content():
+    """For every stored inbound message with no body (filed before the fix
+    that fetches full content), look up its resend_id by Message-ID via the
+    list endpoint, then fetch and fill in the real text/html.
+
+    Returns (updated_count, checked_count)."""
+    from tracking.models import EmailMessage
+
+    empties = list(EmailMessage.objects.filter(direction='inbound', text_body='', html_body=''))
+    if not empties:
+        return 0, 0
+
+    lookup = dict(_list_received_email_ids())
+    updated = 0
+    for msg in empties:
+        resend_id = lookup.get(msg.message_id)
+        if not resend_id:
+            continue
+        full = _fetch_full_email(resend_id)
+        if not full:
+            continue
+        text = full.get('text') or ''
+        html = full.get('html') or ''
+        full_headers = full.get('headers') or {}
+        msg.text_body = _derive_text(text, html)
+        msg.html_body = html
+        msg.in_reply_to = full_headers.get('in-reply-to') or full_headers.get('In-Reply-To') or msg.in_reply_to
+        msg.references = full_headers.get('references') or full_headers.get('References') or msg.references
+        msg.save(update_fields=['text_body', 'html_body', 'in_reply_to', 'references'])
+        updated += 1
+    return updated, len(empties)
+
+
 @csrf_exempt
 @require_POST
 def resend_inbound(request):

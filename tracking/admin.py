@@ -204,12 +204,38 @@ class EmailMessageAdmin(admin.ModelAdmin):
         urls = super().get_urls()
         custom = [
             path('inbox/', self.admin_site.admin_view(self.inbox_view), name='tracking_inbox'),
+            path('inbox/backfill/', self.admin_site.admin_view(self.backfill_view), name='tracking_inbox_backfill'),
             path('inbox/shipment/<int:shipment_id>/', self.admin_site.admin_view(self.shipment_conversation_view), name='tracking_inbox_shipment'),
             path('inbox/address/<str:address>/', self.admin_site.admin_view(self.address_conversation_view), name='tracking_inbox_address'),
         ]
         return custom + urls
 
     def changelist_view(self, request, extra_context=None):
+        return redirect(reverse('admin:tracking_inbox'))
+
+    def backfill_view(self, request):
+        if request.method != 'POST':
+            return redirect(reverse('admin:tracking_inbox'))
+
+        from tracking.webhooks import backfill_all_inbound_content
+        updated, checked = backfill_all_inbound_content()
+        if checked == 0:
+            self.message_user(request, 'Nothing to backfill — every message already has content.', messages.INFO)
+        elif updated == checked:
+            self.message_user(request, f'Recovered content for all {updated} message(s).', messages.SUCCESS)
+        elif updated:
+            self.message_user(
+                request,
+                f'Recovered {updated} of {checked} empty message(s). '
+                f'The rest weren\'t found in Resend\'s received-email log (may have expired or predate the integration).',
+                messages.WARNING,
+            )
+        else:
+            self.message_user(
+                request,
+                f'Could not recover any of the {checked} empty message(s) — check RESEND_API_KEY and the logs.',
+                messages.ERROR,
+            )
         return redirect(reverse('admin:tracking_inbox'))
 
     def inbox_view(self, request):
@@ -307,6 +333,7 @@ class EmailMessageAdmin(admin.ModelAdmin):
 
         rows.sort(key=lambda r: r['last_at'], reverse=True)
         total_unread = sum(1 for g in shipment_groups if g['unread']) + sum(1 for g in address_groups if g['unread'])
+        empty_count = EmailMessage.objects.filter(direction='inbound', text_body='', html_body='').count()
 
         context = {
             **self.admin_site.each_context(request),
@@ -315,6 +342,7 @@ class EmailMessageAdmin(admin.ModelAdmin):
             'query': query,
             'only_unread': only_unread,
             'total_unread': total_unread,
+            'empty_count': empty_count,
             'opts': self.model._meta,
         }
         return render(request, 'admin/tracking/inbox.html', context)
