@@ -2,6 +2,7 @@ import json
 import logging
 import re
 
+import requests
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.utils.html import strip_tags
@@ -10,8 +11,8 @@ from django.views.decorators.http import require_POST
 
 logger = logging.getLogger(__name__)
 
-TRACKING_RE = re.compile(r'shipment-([A-Za-z0-9-]+)@', re.IGNORECASE)
 _HEADER_JUNK_RE = re.compile(r'[\r\n\x00]+')
+RESEND_API_BASE = 'https://api.resend.com'
 
 
 def _sanitize(value):
@@ -56,17 +57,6 @@ def _verify_signature(request):
         return False
 
 
-def _extract_header(headers, name):
-    if not headers:
-        return ''
-    if isinstance(headers, dict):
-        return headers.get(name, '') or headers.get(name.lower(), '')
-    for h in headers:
-        if isinstance(h, dict) and h.get('name', '').lower() == name.lower():
-            return h.get('value', '')
-    return ''
-
-
 def _as_list(value):
     if value is None:
         return []
@@ -102,26 +92,29 @@ def _first_name(value):
 
 
 def _match_shipment(to_value):
-    """Check every recipient (To can carry more than one address — e.g. a
-    client CCs our noreply address alongside the shipment reply address) for
-    the shipment-<tracking_number>@ pattern, not just the first."""
+    """The reply address for a shipment is just <tracking_number>@REPLY_DOMAIN
+    (see shipment_reply_address() in emails.py) — check every recipient (a
+    client can CC more than one address) by taking the local part verbatim
+    and looking it up directly, skipping the general catch-all mailbox."""
     from tracking.models import Shipment
 
     for entry in _as_list(to_value):
         address = _address_of(entry)
-        match = TRACKING_RE.search(address or '')
-        if not match:
+        if not address or '@' not in address:
             continue
-        shipment = Shipment.objects.filter(tracking_number__iexact=match.group(1)).first()
+        local_part = address.split('@', 1)[0]
+        if local_part.lower() == 'inbox':
+            continue
+        shipment = Shipment.objects.filter(tracking_number__iexact=local_part).first()
         if shipment:
             return shipment
     return None
 
 
 def _derive_text(text_body, html_body):
-    """Inbound mail doesn't always include a text/plain part — fall back to
-    a readable plain-text rendering of the HTML rather than leaving the
-    conversation view to strip a full HTML document at display time."""
+    """Some inbound mail has no text/plain part — fall back to a readable
+    plain-text rendering of the HTML rather than leaving the conversation
+    view to strip a full HTML document at display time."""
     if text_body:
         return text_body
     if not html_body:
@@ -130,13 +123,36 @@ def _derive_text(text_body, html_body):
     return strip_tags(without_style).strip()
 
 
+def _fetch_full_email(email_id):
+    """The email.received webhook only carries metadata (from/to/subject/
+    message_id) — Resend explicitly does not include the body, headers, or
+    attachments in the webhook payload. The actual text/html content and the
+    In-Reply-To/References headers have to be fetched from the Received
+    Emails API using the email_id. Returns None on any failure so the
+    caller can still file the message from webhook metadata alone."""
+    api_key = getattr(settings, 'RESEND_API_KEY', '')
+    if not api_key or not email_id:
+        return None
+    try:
+        response = requests.get(
+            f'{RESEND_API_BASE}/emails/receiving/{email_id}',
+            headers={'Authorization': f'Bearer {api_key}'},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+    except Exception as exc:
+        logger.error('Failed to fetch full inbound email %s: %s', email_id, exc)
+        return None
+
+
 @csrf_exempt
 @require_POST
 def resend_inbound(request):
     """Receives Resend's inbound-email webhook for client replies and files
-    them against the matching shipment by the dedicated reply address
-    (shipment-<tracking_number>@REPLY_DOMAIN), or as a general/unmatched
-    message otherwise."""
+    them against the matching shipment by its dedicated reply address
+    (<tracking_number>@REPLY_DOMAIN), or as a general/unmatched message
+    otherwise (e.g. inbox@REPLY_DOMAIN)."""
     if not _verify_signature(request):
         return HttpResponseForbidden('invalid signature')
 
@@ -150,25 +166,38 @@ def resend_inbound(request):
 
     data = payload.get('data', {})
     to_value = data.get('to')
-    to_address = _first_address(to_value)
-    from_address = _first_address(data.get('from'))
-    from_name = _first_name(data.get('from'))
+    from_value = data.get('from')
     subject = data.get('subject', '')
-    text_body = _derive_text(data.get('text', ''), data.get('html', ''))
-    html_body = data.get('html', '') or ''
-    headers = data.get('headers')
-    message_id = _sanitize(data.get('message_id') or _extract_header(headers, 'Message-ID'))
-    in_reply_to = _sanitize(_extract_header(headers, 'In-Reply-To'))
-    references = _sanitize(_extract_header(headers, 'References'))
+    message_id = _sanitize(data.get('message_id', ''))
 
     from tracking.models import EmailMessage
 
-    # Idempotency: Resend retries on non-2xx (and can double-deliver), which
-    # would otherwise create duplicate bubbles and inflate unread counts.
+    # Idempotency check first — before spending an API call fetching the
+    # body — since Resend retries on non-2xx (and can double-deliver).
     if message_id and EmailMessage.objects.filter(message_id=message_id, direction='inbound').exists():
         logger.info('Duplicate inbound webhook delivery ignored (message_id=%s)', message_id)
         return HttpResponse(status=200)
 
+    full = _fetch_full_email(data.get('email_id', ''))
+    if full:
+        text_body = full.get('text') or ''
+        html_body = full.get('html') or ''
+        full_headers = full.get('headers') or {}
+        in_reply_to = full_headers.get('in-reply-to') or full_headers.get('In-Reply-To') or ''
+        references = full_headers.get('references') or full_headers.get('References') or ''
+    else:
+        text_body = ''
+        html_body = ''
+        in_reply_to = ''
+        references = ''
+
+    text_body = _derive_text(text_body, html_body)
+    in_reply_to = _sanitize(in_reply_to)
+    references = _sanitize(references)
+
+    from_address = _first_address(from_value)
+    from_name = _first_name(from_value)
+    to_address = _first_address(to_value)
     shipment = _match_shipment(to_value)
 
     EmailMessage.objects.create(

@@ -288,9 +288,9 @@ def _get_api_key():
 def shipment_reply_address(shipment):
     """Dedicated inbound address for this shipment — replies land on this
     address, get caught by the Resend inbound webhook, and are matched back
-    to the shipment by tracking number."""
+    to the shipment by tracking number (see _match_shipment in webhooks.py)."""
     domain = getattr(settings, 'REPLY_DOMAIN', 'reply.vossandthornellp.org')
-    return f'shipment-{shipment.tracking_number}@{domain}'
+    return f'{shipment.tracking_number}@{domain}'
 
 
 def sanitize_header_value(value):
