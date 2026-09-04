@@ -40,6 +40,31 @@
     vertical-align: middle;
   }
 
+  .vt-link-form {
+    display: inline-flex;
+    gap: 8px;
+    margin-left: 12px;
+    vertical-align: middle;
+  }
+  .vt-link-form input[type=text] {
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 12px;
+    width: 150px;
+  }
+  .vt-link-form button {
+    background: transparent;
+    border: 1px solid #c9a84c;
+    color: #07070d;
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    letter-spacing: .5px;
+    cursor: pointer;
+  }
+  .vt-link-form button:hover { background: #c9a84c; }
+
   .vt-thread {
     display: flex;
     flex-direction: column;
@@ -153,6 +178,11 @@
         {{ shipment.tracking_number }} · {{ shipment.origin_city }} &rarr; {{ shipment.destination_city }} · {{ address }}
       {% else %}
         Not linked to a shipment
+        <form method="post" action="{% url 'admin:tracking_inbox_link_shipment' address %}" class="vt-link-form">
+          {% csrf_token %}
+          <input type="text" name="tracking_number" placeholder="VT-2026-XXXXXX" required>
+          <button type="submit">Link to shipment</button>
+        </form>
       {% endif %}
     </div>
   </div>

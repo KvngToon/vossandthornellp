@@ -207,6 +207,7 @@ class EmailMessageAdmin(admin.ModelAdmin):
             path('inbox/backfill/', self.admin_site.admin_view(self.backfill_view), name='tracking_inbox_backfill'),
             path('inbox/shipment/<int:shipment_id>/', self.admin_site.admin_view(self.shipment_conversation_view), name='tracking_inbox_shipment'),
             path('inbox/address/<str:address>/', self.admin_site.admin_view(self.address_conversation_view), name='tracking_inbox_address'),
+            path('inbox/address/<str:address>/link/', self.admin_site.admin_view(self.link_shipment_view), name='tracking_inbox_link_shipment'),
         ]
         return custom + urls
 
@@ -405,3 +406,17 @@ class EmailMessageAdmin(admin.ModelAdmin):
             request, thread_qs, None, address,
             'admin:tracking_inbox_address', [address],
         )
+
+    def link_shipment_view(self, request, address):
+        if request.method != 'POST':
+            return redirect(reverse('admin:tracking_inbox_address', args=[address]))
+
+        tracking_number = request.POST.get('tracking_number', '').strip()
+        shipment = Shipment.objects.filter(tracking_number__iexact=tracking_number).first()
+        if not shipment:
+            self.message_user(request, f'No shipment found with tracking number "{tracking_number}".', messages.ERROR)
+            return redirect(reverse('admin:tracking_inbox_address', args=[address]))
+
+        updated = EmailMessage.objects.filter(_address_conversation_filter(address)).update(shipment=shipment)
+        self.message_user(request, f'Linked {updated} message(s) to {shipment.tracking_number}.', messages.SUCCESS)
+        return redirect(reverse('admin:tracking_inbox_shipment', args=[shipment.pk]))
