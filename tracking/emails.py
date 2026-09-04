@@ -1,4 +1,5 @@
 import logging
+import re
 import resend
 from django.conf import settings
 
@@ -284,19 +285,59 @@ def _get_api_key():
     return key
 
 
+def shipment_reply_address(shipment):
+    """Dedicated inbound address for this shipment — replies land on this
+    address, get caught by the Resend inbound webhook, and are matched back
+    to the shipment by tracking number."""
+    domain = getattr(settings, 'REPLY_DOMAIN', 'reply.vossandthornellp.org')
+    return f'shipment-{shipment.tracking_number}@{domain}'
+
+
+def sanitize_header_value(value):
+    """Strip CR/LF/NUL from a value before it's echoed into an outbound
+    email header. Values like In-Reply-To/References round-trip from
+    attacker-controlled inbound mail, so this blocks SMTP header injection
+    (e.g. a crafted Message-ID containing '\\r\\nBcc: ...')."""
+    if not value:
+        return value
+    return re.sub(r'[\r\n\x00]+', ' ', value).strip()
+
+
+def _log_outbound(shipment, to_email, subject, text_summary, html_body, resend_result):
+    from tracking.models import EmailMessage
+    message_id = ''
+    if isinstance(resend_result, dict):
+        message_id = resend_result.get('id', '')
+    EmailMessage.objects.create(
+        shipment=shipment,
+        direction='outbound',
+        from_email=FROM_ADDRESS,
+        to_email=to_email,
+        subject=subject,
+        text_body=text_summary,
+        html_body=html_body,
+        message_id=message_id,
+    )
+
+
 def send_shipment_created_email(shipment):
     key = _get_api_key()
     if not key or not shipment.receiver_email:
         return
     resend.api_key = key
+    subject = f'Shipment {shipment.tracking_number} — Booking Confirmed'
+    html = get_shipment_created_html(shipment)
     try:
-        resend.Emails.send({
+        result = resend.Emails.send({
             'from': FROM_ADDRESS,
             'to': [shipment.receiver_email],
-            'subject': f'Shipment {shipment.tracking_number} — Booking Confirmed',
-            'html': get_shipment_created_html(shipment),
+            'reply_to': shipment_reply_address(shipment),
+            'subject': subject,
+            'html': html,
         })
         logger.info('Confirmation email sent → %s (%s)', shipment.receiver_email, shipment.tracking_number)
+        summary = f'Booking confirmation sent for {shipment.tracking_number}.'
+        _log_outbound(shipment, shipment.receiver_email, subject, summary, html, result)
     except Exception as exc:
         logger.error('Failed to send confirmation email for %s: %s', shipment.tracking_number, exc)
 
@@ -306,14 +347,19 @@ def send_status_update_email(shipment, old_status):
     if not key or not shipment.receiver_email:
         return
     resend.api_key = key
+    subject = f'Shipment {shipment.tracking_number} — Status Update: {shipment.status}'
+    html = get_status_update_html(shipment, old_status)
     try:
-        resend.Emails.send({
+        result = resend.Emails.send({
             'from': FROM_ADDRESS,
             'to': [shipment.receiver_email],
-            'subject': f'Shipment {shipment.tracking_number} — Status Update: {shipment.status}',
-            'html': get_status_update_html(shipment, old_status),
+            'reply_to': shipment_reply_address(shipment),
+            'subject': subject,
+            'html': html,
         })
         logger.info('Status update email sent → %s (%s → %s)', shipment.receiver_email, old_status, shipment.status)
+        summary = f'Status update sent: {old_status} → {shipment.status}.'
+        _log_outbound(shipment, shipment.receiver_email, subject, summary, html, result)
     except Exception as exc:
         logger.error('Failed to send status update email for %s: %s', shipment.tracking_number, exc)
 
@@ -471,13 +517,18 @@ def send_event_update_email(event):
     if not key or not event.shipment.receiver_email:
         return
     resend.api_key = key
+    subject = f'Shipment {event.shipment.tracking_number} — Update: {event.status}'
+    html = get_event_update_html(event)
     try:
-        resend.Emails.send({
+        result = resend.Emails.send({
             'from': FROM_ADDRESS,
             'to': [event.shipment.receiver_email],
-            'subject': f'Shipment {event.shipment.tracking_number} — Update: {event.status}',
-            'html': get_event_update_html(event),
+            'reply_to': shipment_reply_address(event.shipment),
+            'subject': subject,
+            'html': html,
         })
+        summary = f'{event.status} — {event.description}'.strip()
+        _log_outbound(event.shipment, event.shipment.receiver_email, subject, summary, html, result)
         logger.info(
             'Event update email sent → %s (%s | %s)',
             event.shipment.receiver_email,
@@ -509,3 +560,88 @@ def send_contact_enquiry_email(name, organisation, email, subject, message):
     except Exception as exc:
         logger.error('Failed to send contact enquiry email: %s', exc)
         return False
+
+
+# ── Staff reply (in-house mailing system) ──────────────────────────────────────
+
+def general_reply_address():
+    """Catch-all reply address for conversations not tied to a shipment
+    (general enquiries, unmatched senders) — still lands back on the same
+    inbound webhook so the conversation keeps going in the admin Inbox."""
+    domain = getattr(settings, 'REPLY_DOMAIN', 'reply.vossandthornellp.org')
+    return f'inbox@{domain}'
+
+
+def get_staff_reply_html(shipment, body_text):
+    paragraphs = ''.join(
+        f'<p style="margin:0 0 14px;font-family:Georgia,serif;font-size:14px;color:#1a1a2e;line-height:1.75;">{line}</p>'
+        for line in body_text.splitlines() if line.strip()
+    )
+    shipment_block = ''
+    if shipment:
+        shipment_block = f"""
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;">
+          {_detail_row('Tracking Number', shipment.tracking_number, last=True)}
+        </table>
+        {_track_button(shipment.tracking_number)}"""
+    body = f"""
+    <tr>
+      <td style="background:#ffffff;padding:44px 48px 48px;">
+        <p style="margin:0;font-family:Arial,sans-serif;font-size:10px;letter-spacing:4px;
+                  color:#c9a84c;text-transform:uppercase;">Message from Voss &amp; Thorne</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+          <tr><td>{paragraphs}</td></tr>
+        </table>
+        {shipment_block}
+      </td>
+    </tr>"""
+    return _wrap(_header() + body + _footer())
+
+
+def send_staff_reply_email(to_email, subject, body_text, in_reply_to=None, references=None, shipment=None):
+    """Send a reply from a staff member in the admin, threaded onto the
+    conversation via In-Reply-To/References headers. Works for any inbound
+    sender — shipment is optional context, not a requirement."""
+    key = _get_api_key()
+    if not key:
+        return None
+    resend.api_key = key
+    html = get_staff_reply_html(shipment, body_text)
+    reply_to = shipment_reply_address(shipment) if shipment else general_reply_address()
+    subject = sanitize_header_value(subject)
+    in_reply_to = sanitize_header_value(in_reply_to)
+    references = sanitize_header_value(references)
+    payload = {
+        'from': FROM_ADDRESS,
+        'to': [to_email],
+        'reply_to': reply_to,
+        'subject': subject,
+        'html': html,
+    }
+    references_header = references or in_reply_to
+    if in_reply_to or references_header:
+        payload['headers'] = {}
+        if in_reply_to:
+            payload['headers']['In-Reply-To'] = in_reply_to
+        if references_header:
+            payload['headers']['References'] = references_header
+    try:
+        result = resend.Emails.send(payload)
+        from tracking.models import EmailMessage
+        EmailMessage.objects.create(
+            shipment=shipment,
+            direction='outbound',
+            from_email=FROM_ADDRESS,
+            to_email=to_email,
+            subject=subject,
+            text_body=body_text,
+            html_body=html,
+            message_id=result.get('id', '') if isinstance(result, dict) else '',
+            in_reply_to=in_reply_to or '',
+            references=references_header or '',
+        )
+        logger.info('Staff reply sent → %s (%s)', to_email, shipment.tracking_number if shipment else 'no shipment')
+        return result
+    except Exception as exc:
+        logger.error('Failed to send staff reply to %s: %s', to_email, exc)
+        return None

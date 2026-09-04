@@ -1,0 +1,183 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrahead %}
+<style>
+  .vt-inbox { max-width: 760px; }
+  .vt-back {
+    display: inline-block;
+    margin-bottom: 14px;
+    font-size: 12px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color: #767676;
+    text-decoration: none;
+  }
+  .vt-back:hover { color: #07070d; }
+
+  .vt-inbox-header {
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #c9a84c;
+  }
+  .vt-inbox-header h1 {
+    margin: 0 0 4px;
+    font-family: Georgia, serif;
+    font-weight: normal;
+    color: #07070d;
+  }
+  .vt-inbox-header .subtitle { color: #767676; font-size: 13px; }
+  .vt-status-pill {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 9px;
+    border-radius: 3px;
+    font-size: 10px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    background: #07070d;
+    color: #c9a84c;
+    vertical-align: middle;
+  }
+
+  .vt-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+    background: #f4f4f0;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    max-height: 58vh;
+    overflow-y: auto;
+  }
+  .vt-empty { color: #888; font-style: italic; padding: 8px 0; }
+
+  .vt-bubble-row { display: flex; }
+  .vt-bubble-row.inbound { justify-content: flex-start; }
+  .vt-bubble-row.outbound { justify-content: flex-end; }
+
+  .vt-bubble {
+    max-width: 74%;
+    padding: 13px 17px;
+    border-radius: 10px;
+    line-height: 1.6;
+    font-size: 13.5px;
+    white-space: pre-line;
+    word-wrap: break-word;
+  }
+  .vt-bubble.inbound {
+    background: #ffffff;
+    border: 1px solid #e2e2dc;
+    border-bottom-left-radius: 2px;
+  }
+  .vt-bubble.outbound {
+    background: #07070d;
+    color: #eceef7;
+    border-bottom-right-radius: 2px;
+  }
+  .vt-bubble .vt-meta {
+    display: block;
+    font-size: 10px;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    color: #999990;
+  }
+  .vt-bubble.outbound .vt-meta { color: #c9a84c; }
+  .vt-bubble .vt-subject {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  .vt-bubble .vt-time {
+    display: block;
+    margin-top: 8px;
+    font-size: 10px;
+    opacity: .6;
+  }
+
+  .vt-reply-box {
+    background: #fff;
+    border: 1px solid #e2e2dc;
+    border-radius: 6px;
+    padding: 18px 20px;
+  }
+  .vt-reply-box h2 {
+    margin: 0 0 14px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #c9a84c;
+  }
+  .vt-reply-box .form-row { padding: 6px 0; }
+  .vt-reply-box input[type=text],
+  .vt-reply-box input[type=email],
+  .vt-reply-box textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px 10px;
+  }
+  .vt-reply-box input[type=submit] {
+    background: #07070d;
+    color: #c9a84c;
+    border: none;
+    padding: 10px 26px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .vt-reply-box input[type=submit]:hover { background: #1a1a2e; }
+</style>
+{% endblock %}
+
+{% block content %}
+<a class="vt-back" href="{% url 'admin:tracking_inbox' %}">&larr; Back to Inbox</a>
+
+<div class="vt-inbox">
+  <div class="vt-inbox-header">
+    <h1>
+      {% if shipment %}{{ shipment.receiver_name }}{% else %}{{ address }}{% endif %}
+      {% if shipment %}<span class="vt-status-pill">{{ shipment.status }}</span>{% endif %}
+    </h1>
+    <div class="subtitle">
+      {% if shipment %}
+        {{ shipment.tracking_number }} · {{ shipment.origin_city }} &rarr; {{ shipment.destination_city }} · {{ address }}
+      {% else %}
+        Not linked to a shipment
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="vt-thread">
+    {% if thread %}
+      {% for msg in thread %}
+        <div class="vt-bubble-row {{ msg.direction }}">
+          <div class="vt-bubble {{ msg.direction }}">
+            <span class="vt-meta">
+              {% if msg.direction == 'inbound' %}{{ msg.from_name|default:msg.from_email }}{% else %}Voss &amp; Thorne{% endif %}
+            </span>
+            {% if msg.subject %}<span class="vt-subject">{{ msg.subject }}</span>{% endif %}
+            {{ msg.text_body|default:"(no content)" }}
+            <span class="vt-time">{{ msg.created_at|date:"M j, g:i A" }} &middot; {{ msg.created_at|timesince }} ago</span>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="vt-empty">No messages yet with {% if shipment %}{{ shipment.receiver_name }}{% else %}{{ address }}{% endif %}.</div>
+    {% endif %}
+  </div>
+
+  <div class="vt-reply-box">
+    <h2>Reply</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <input type="submit" value="Send">
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -33,7 +33,7 @@ class Shipment(models.Model):
     receiver_name = models.CharField(max_length=200)
     receiver_address = models.CharField(max_length=500)
     receiver_phone = models.CharField(max_length=30)
-    receiver_email = models.CharField(max_length=254)
+    receiver_email = models.EmailField(max_length=254)
 
     # Route
     origin_city = models.CharField(max_length=100)
@@ -90,3 +90,42 @@ class ShipmentEvent(models.Model):
 
     def __str__(self):
         return f'{self.shipment.tracking_number} | {self.status} @ {self.location}'
+
+
+class EmailMessage(models.Model):
+    """One message in a shipment's email thread — either sent by us (outbound)
+    or received from a client reply via the Resend inbound webhook (inbound)."""
+
+    DIRECTION_CHOICES = [
+        ('outbound', 'Outbound (sent by us)'),
+        ('inbound', 'Inbound (from client)'),
+    ]
+
+    shipment = models.ForeignKey(
+        Shipment, on_delete=models.CASCADE, related_name='email_thread',
+        null=True, blank=True,
+    )
+    direction = models.CharField(max_length=10, choices=DIRECTION_CHOICES)
+
+    from_email = models.CharField(max_length=254)
+    from_name = models.CharField(max_length=200, blank=True)
+    to_email = models.CharField(max_length=254)
+
+    subject = models.CharField(max_length=500, blank=True)
+    text_body = models.TextField(blank=True)
+    html_body = models.TextField(blank=True)
+
+    # Threading headers so replies render inline in the client's mail client.
+    message_id = models.CharField(max_length=998, blank=True, db_index=True)
+    in_reply_to = models.CharField(max_length=998, blank=True)
+    references = models.TextField(blank=True)
+
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        who = self.from_name or self.from_email
+        return f'[{self.direction}] {who}: {self.subject}'
