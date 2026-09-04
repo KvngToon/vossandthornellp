@@ -4,7 +4,8 @@
 <style>
   .vt-inbox { max-width: 760px; }
   .vt-back {
-    display: inline-block;
+    display: block;
+    width: fit-content;
     margin-bottom: 14px;
     font-size: 12px;
     letter-spacing: .5px;
@@ -95,6 +96,10 @@
     font-size: 10px;
     opacity: .6;
   }
+  .vt-no-content {
+    font-style: italic;
+    opacity: .55;
+  }
 
   .vt-reply-box {
     background: #fff;
@@ -135,9 +140,9 @@
 {% endblock %}
 
 {% block content %}
-<a class="vt-back" href="{% url 'admin:tracking_inbox' %}">&larr; Back to Inbox</a>
-
 <div class="vt-inbox">
+  <a class="vt-back" href="{% url 'admin:tracking_inbox' %}">&larr; Back to Inbox</a>
+
   <div class="vt-inbox-header">
     <h1>
       {% if shipment %}{{ shipment.receiver_name }}{% else %}{{ address }}{% endif %}
@@ -161,7 +166,7 @@
               {% if msg.direction == 'inbound' %}{{ msg.from_name|default:msg.from_email }}{% else %}Voss &amp; Thorne{% endif %}
             </span>
             {% if msg.subject %}<span class="vt-subject">{{ msg.subject }}</span>{% endif %}
-            {{ msg.text_body|default:"(no content)" }}
+            {% if msg.text_body %}{{ msg.text_body }}{% else %}<span class="vt-no-content">(no content)</span>{% endif %}
             <span class="vt-time">{{ msg.created_at|date:"M j, g:i A" }} &middot; {{ msg.created_at|timesince }} ago</span>
           </div>
         </div>
