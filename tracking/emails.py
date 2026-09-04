@@ -547,15 +547,30 @@ def send_contact_enquiry_email(name, organisation, email, subject, message):
     if not key:
         return False
     resend.api_key = key
+    enquiry_subject = f'Enquiry: {subject} — {organisation}'
     try:
         resend.Emails.send({
             'from': FROM_ADDRESS,
             'to': ['enquiries@vossandthornellp.org'],
-            'reply_to': email,
-            'subject': f'Enquiry: {subject} — {organisation}',
+            'reply_to': general_reply_address(),
+            'subject': enquiry_subject,
             'html': get_contact_enquiry_html(name, organisation, email, subject, message),
         })
         logger.info('Contact enquiry email sent from %s (%s)', email, organisation)
+
+        # File the enquiry itself into the admin Inbox as the first message
+        # of a conversation, so staff answer it from there (send_staff_reply_email)
+        # instead of replying from whatever mailbox reads enquiries@ directly.
+        from tracking.models import EmailMessage
+        EmailMessage.objects.create(
+            shipment=None,
+            direction='inbound',
+            from_email=email,
+            from_name=f'{name} ({organisation})' if organisation else name,
+            to_email=general_reply_address(),
+            subject=enquiry_subject,
+            text_body=message,
+        )
         return True
     except Exception as exc:
         logger.error('Failed to send contact enquiry email: %s', exc)
