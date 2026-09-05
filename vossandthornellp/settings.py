@@ -95,12 +95,18 @@ RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 DEFAULT_FROM_EMAIL = 'Voss & Thorne LLP <noreply@shipment.vossandthornellp.org>'
 
 # Subdomain that receives inbound client replies via Resend Inbound Email.
-# Each shipment gets its own reply address: shipment-<tracking_number>@<REPLY_DOMAIN>
+# Each shipment gets its own reply address: <tracking_number>@<REPLY_DOMAIN>
 REPLY_DOMAIN = os.environ.get('REPLY_DOMAIN', 'reply.vossandthornellp.org')
 
 # Signing secret for the Resend inbound webhook (Svix). Found in the Resend
 # dashboard under Webhooks → the inbound endpoint → Signing Secret.
 RESEND_WEBHOOK_SECRET = os.environ.get('RESEND_WEBHOOK_SECRET', '')
+
+# Where to send a heads-up notification every time a client message comes in.
+INBOUND_NOTIFY_EMAIL = os.environ.get('INBOUND_NOTIFY_EMAIL', 'kvngtoon@gmail.com')
+
+# Base URL used to build links in notification emails (no trailing slash).
+SITE_URL = os.environ.get('SITE_URL', 'https://vossandthornellp.org')
 
 # ── Misc ───────────────────────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

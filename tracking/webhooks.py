@@ -262,7 +262,7 @@ def resend_inbound(request):
     to_address = _first_address(to_value)
     shipment = _match_shipment(to_value)
 
-    EmailMessage.objects.create(
+    inbound_msg = EmailMessage.objects.create(
         shipment=shipment,
         direction='inbound',
         from_email=from_address,
@@ -280,5 +280,8 @@ def resend_inbound(request):
         logger.info('Inbound reply filed → %s (%s)', from_address, shipment.tracking_number)
     else:
         logger.warning('Inbound reply from %s could not be matched to a shipment (to=%s)', from_address, to_address)
+
+    from tracking.emails import send_inbound_notification_email
+    send_inbound_notification_email(inbound_msg)
 
     return HttpResponse(status=200)

@@ -562,7 +562,7 @@ def send_contact_enquiry_email(name, organisation, email, subject, message):
         # of a conversation, so staff answer it from there (send_staff_reply_email)
         # instead of replying from whatever mailbox reads enquiries@ directly.
         from tracking.models import EmailMessage
-        EmailMessage.objects.create(
+        inbound_msg = EmailMessage.objects.create(
             shipment=None,
             direction='inbound',
             from_email=email,
@@ -571,10 +571,74 @@ def send_contact_enquiry_email(name, organisation, email, subject, message):
             subject=enquiry_subject,
             text_body=message,
         )
+        send_inbound_notification_email(inbound_msg)
         return True
     except Exception as exc:
         logger.error('Failed to send contact enquiry email: %s', exc)
         return False
+
+
+# ── Inbound notification (heads-up when a client message arrives) ─────────────
+
+def send_inbound_notification_email(msg):
+    """Alerts a real inbox (INBOUND_NOTIFY_EMAIL) whenever a new inbound
+    EmailMessage is filed, so staff don't have to keep the admin Inbox open
+    to notice a client wrote in."""
+    from django.utils.html import escape
+
+    key = _get_api_key()
+    notify_to = getattr(settings, 'INBOUND_NOTIFY_EMAIL', '')
+    if not key or not notify_to:
+        return
+    resend.api_key = key
+
+    site_url = getattr(settings, 'SITE_URL', 'https://vossandthornellp.org')
+    if msg.shipment:
+        link = f'{site_url}/admin/tracking/emailmessage/inbox/shipment/{msg.shipment.pk}/'
+        context_line = f'Shipment {msg.shipment.tracking_number}'
+    else:
+        from urllib.parse import quote
+        link = f'{site_url}/admin/tracking/emailmessage/inbox/address/{quote(msg.from_email)}/'
+        context_line = 'General enquiry — not linked to a shipment'
+
+    sender = escape(msg.from_name or msg.from_email)
+    subject_line = escape(msg.subject or '(no subject)')
+    snippet = escape((msg.text_body or '')[:280])
+
+    html = f"""
+    <tr>
+      <td style="background:#ffffff;padding:36px 40px;">
+        <p style="margin:0;font-family:Arial,sans-serif;font-size:10px;letter-spacing:4px;
+                  color:#c9a84c;text-transform:uppercase;">New Client Message</p>
+        <h1 style="margin:14px 0 0;font-family:Georgia,serif;font-size:24px;color:#07070d;
+                   font-weight:normal;">{sender}</h1>
+        <p style="margin:6px 0 0;font-family:Arial,sans-serif;font-size:12px;color:#999;">{context_line}</p>
+        <table width="100%" cellpadding="0" cellspacing="0"
+               style="margin-top:24px;background:#f7f7f2;border-left:3px solid #c9a84c;padding:18px 22px;">
+          <tr><td>
+            <p style="margin:0 0 8px;font-family:Georgia,serif;font-size:15px;color:#1a1a2e;">{subject_line}</p>
+            <p style="margin:0;font-family:Arial,sans-serif;font-size:13px;color:#55556a;line-height:1.6;white-space:pre-line;">{snippet}</p>
+          </td></tr>
+        </table>
+        <table cellpadding="0" cellspacing="0" style="margin-top:28px;">
+          <tr><td style="background:#07070d;border-radius:2px;">
+            <a href="{link}" style="display:inline-block;padding:12px 28px;font-family:Arial,sans-serif;
+                     font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;
+                     color:#c9a84c;text-decoration:none;">Open in Inbox &rarr;</a>
+          </td></tr>
+        </table>
+      </td>
+    </tr>"""
+
+    try:
+        resend.Emails.send({
+            'from': FROM_ADDRESS,
+            'to': [notify_to],
+            'subject': f'New message from {msg.from_name or msg.from_email}: {msg.subject or "(no subject)"}',
+            'html': _wrap(_header() + html + _footer()),
+        })
+    except Exception as exc:
+        logger.error('Failed to send inbound notification email: %s', exc)
 
 
 # ── Staff reply (in-house mailing system) ──────────────────────────────────────
