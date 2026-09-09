@@ -129,3 +129,14 @@ class EmailMessage(models.Model):
     def __str__(self):
         who = self.from_name or self.from_email
         return f'[{self.direction}] {who}: {self.subject}'
+
+
+class EmailAttachment(models.Model):
+    message = models.ForeignKey(EmailMessage, on_delete=models.CASCADE, related_name='attachments')
+    file = models.FileField(upload_to='email_attachments/%Y/%m/%d/')
+    filename = models.CharField(max_length=255)
+    content_type = models.CharField(max_length=100, blank=True)
+    size = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return self.filename

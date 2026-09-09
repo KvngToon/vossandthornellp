@@ -26,10 +26,31 @@ class EmailMessageInline(admin.TabularInline):
         return False
 
 
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    """Django's plain FileField.clean() only handles a single UploadedFile —
+    with allow_multiple_selected on the widget, value_from_datadict returns a
+    list instead, so clean() must validate each item itself. This is the
+    pattern from Django's own docs for multi-file upload fields."""
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('widget', MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            return [single_file_clean(d, initial) for d in data]
+        return single_file_clean(data, initial)
+
+
 class StaffReplyForm(forms.Form):
     to_email = forms.EmailField(label='To')
     subject = forms.CharField(max_length=500)
     body = forms.CharField(widget=forms.Textarea(attrs={'rows': 10}))
+    attachments = MultipleFileField(required=False, label='Attach files')
 
 
 @admin.register(Shipment)
@@ -357,25 +378,34 @@ class EmailMessageAdmin(admin.ModelAdmin):
         }
 
         if request.method == 'POST':
-            form = StaffReplyForm(request.POST, initial=initial)
+            form = StaffReplyForm(request.POST, request.FILES, initial=initial)
             if form.is_valid():
-                references = ' '.join(m.message_id for m in thread_qs if m.message_id) or None
-                in_reply_to = last_message.message_id if last_message else None
-
-                from tracking.emails import send_staff_reply_email
-                result = send_staff_reply_email(
-                    form.cleaned_data['to_email'],
-                    form.cleaned_data['subject'],
-                    form.cleaned_data['body'],
-                    in_reply_to=in_reply_to,
-                    references=references,
-                    shipment=shipment,
-                )
-                if result is not None:
-                    self.message_user(request, 'Reply sent.', messages.SUCCESS)
+                uploaded_files = form.cleaned_data['attachments']
+                from tracking.emails import validate_attachments
+                try:
+                    validate_attachments(uploaded_files)
+                except ValueError as exc:
+                    self.message_user(request, str(exc), messages.ERROR)
+                    form.add_error(None, str(exc))
                 else:
-                    self.message_user(request, 'Failed to send reply — check the logs.', messages.ERROR)
-                return redirect(reverse(view_name, args=view_args))
+                    references = ' '.join(m.message_id for m in thread_qs if m.message_id) or None
+                    in_reply_to = last_message.message_id if last_message else None
+
+                    from tracking.emails import send_staff_reply_email
+                    result = send_staff_reply_email(
+                        form.cleaned_data['to_email'],
+                        form.cleaned_data['subject'],
+                        form.cleaned_data['body'],
+                        in_reply_to=in_reply_to,
+                        references=references,
+                        shipment=shipment,
+                        attachments=uploaded_files,
+                    )
+                    if result is not None:
+                        self.message_user(request, 'Reply sent.', messages.SUCCESS)
+                    else:
+                        self.message_user(request, 'Failed to send reply — check the logs.', messages.ERROR)
+                    return redirect(reverse(view_name, args=view_args))
         else:
             form = StaffReplyForm(initial=initial)
 

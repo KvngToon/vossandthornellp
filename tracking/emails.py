@@ -677,10 +677,29 @@ def get_staff_reply_html(shipment, body_text):
     return _wrap(_header() + body + _footer())
 
 
-def send_staff_reply_email(to_email, subject, body_text, in_reply_to=None, references=None, shipment=None):
+MAX_ATTACHMENT_SIZE = 15 * 1024 * 1024   # 15MB per file
+MAX_TOTAL_ATTACHMENTS_SIZE = 25 * 1024 * 1024  # 25MB per email, Resend's own cap is ~40MB
+
+
+def validate_attachments(files):
+    """Raises ValueError with a human-readable message if the given upload
+    list can't be sent. Returns nothing on success."""
+    total = 0
+    for f in files:
+        if f.size > MAX_ATTACHMENT_SIZE:
+            raise ValueError(f'"{f.name}" is {f.size // (1024*1024)}MB — the limit per file is 15MB.')
+        total += f.size
+    if total > MAX_TOTAL_ATTACHMENTS_SIZE:
+        raise ValueError(f'Attachments total {total // (1024*1024)}MB — the limit per email is 25MB.')
+
+
+def send_staff_reply_email(to_email, subject, body_text, in_reply_to=None, references=None, shipment=None, attachments=None):
     """Send a reply from a staff member in the admin, threaded onto the
     conversation via In-Reply-To/References headers. Works for any inbound
-    sender — shipment is optional context, not a requirement."""
+    sender — shipment is optional context, not a requirement.
+
+    attachments: an iterable of Django UploadedFile objects (from
+    request.FILES.getlist(...)), or None."""
     key = _get_api_key()
     if not key:
         return None
@@ -690,6 +709,13 @@ def send_staff_reply_email(to_email, subject, body_text, in_reply_to=None, refer
     subject = sanitize_header_value(subject)
     in_reply_to = sanitize_header_value(in_reply_to)
     references = sanitize_header_value(references)
+
+    attachments = list(attachments or [])
+    attachment_blobs = []  # (filename, content_type, bytes) — read once, reused for send + storage
+    for f in attachments:
+        content = f.read()
+        attachment_blobs.append((f.name, f.content_type or '', content))
+
     payload = {
         'from': FROM_ADDRESS,
         'to': [to_email],
@@ -697,6 +723,11 @@ def send_staff_reply_email(to_email, subject, body_text, in_reply_to=None, refer
         'subject': subject,
         'html': html,
     }
+    if attachment_blobs:
+        payload['attachments'] = [
+            {'filename': name, 'content': list(content)}
+            for name, _ct, content in attachment_blobs
+        ]
     references_header = references or in_reply_to
     if in_reply_to or references_header:
         payload['headers'] = {}
@@ -706,8 +737,9 @@ def send_staff_reply_email(to_email, subject, body_text, in_reply_to=None, refer
             payload['headers']['References'] = references_header
     try:
         result = resend.Emails.send(payload)
-        from tracking.models import EmailMessage
-        EmailMessage.objects.create(
+        from django.core.files.base import ContentFile
+        from tracking.models import EmailAttachment, EmailMessage
+        msg = EmailMessage.objects.create(
             shipment=shipment,
             direction='outbound',
             from_email=FROM_ADDRESS,
@@ -719,6 +751,9 @@ def send_staff_reply_email(to_email, subject, body_text, in_reply_to=None, refer
             in_reply_to=in_reply_to or '',
             references=references_header or '',
         )
+        for name, content_type, content in attachment_blobs:
+            attachment = EmailAttachment(message=msg, filename=name, content_type=content_type, size=len(content))
+            attachment.file.save(name, ContentFile(content), save=True)
         logger.info('Staff reply sent → %s (%s)', to_email, shipment.tracking_number if shipment else 'no shipment')
         return result
     except Exception as exc:
