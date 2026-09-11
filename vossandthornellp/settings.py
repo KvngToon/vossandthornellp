@@ -102,8 +102,14 @@ REPLY_DOMAIN = os.environ.get('REPLY_DOMAIN', 'reply.vossandthornellp.org')
 # dashboard under Webhooks → the inbound endpoint → Signing Secret.
 RESEND_WEBHOOK_SECRET = os.environ.get('RESEND_WEBHOOK_SECRET', '')
 
-# Where to send a heads-up notification every time a client message comes in.
-INBOUND_NOTIFY_EMAIL = os.environ.get('INBOUND_NOTIFY_EMAIL', 'kvngtoon@gmail.com')
+# Where to send a heads-up notification every time a message is sent OR
+# received on the platform. ACTIVITY_NOTIFY_EMAIL is the current name;
+# INBOUND_NOTIFY_EMAIL is read too so an already-configured Render env var
+# keeps working without needing to be renamed.
+ACTIVITY_NOTIFY_EMAIL = os.environ.get(
+    'ACTIVITY_NOTIFY_EMAIL',
+    os.environ.get('INBOUND_NOTIFY_EMAIL', 'kvngtoon001@gmail.com'),
+)
 
 # Base URL used to build links in notification emails (no trailing slash).
 SITE_URL = os.environ.get('SITE_URL', 'https://vossandthornellp.org')

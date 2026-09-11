@@ -308,7 +308,7 @@ def _log_outbound(shipment, to_email, subject, text_summary, html_body, resend_r
     message_id = ''
     if isinstance(resend_result, dict):
         message_id = resend_result.get('id', '')
-    EmailMessage.objects.create(
+    msg = EmailMessage.objects.create(
         shipment=shipment,
         direction='outbound',
         from_email=FROM_ADDRESS,
@@ -318,6 +318,7 @@ def _log_outbound(shipment, to_email, subject, text_summary, html_body, resend_r
         html_body=html_body,
         message_id=message_id,
     )
+    send_outbound_notification_email(msg)
 
 
 def send_shipment_created_email(shipment):
@@ -578,40 +579,41 @@ def send_contact_enquiry_email(name, organisation, email, subject, message):
         return False
 
 
-# ── Inbound notification (heads-up when a client message arrives) ─────────────
+# ── Activity notification (heads-up on every send/receive) ────────────────────
 
-def send_inbound_notification_email(msg):
-    """Alerts a real inbox (INBOUND_NOTIFY_EMAIL) whenever a new inbound
-    EmailMessage is filed, so staff don't have to keep the admin Inbox open
-    to notice a client wrote in."""
+def _conversation_link(msg):
+    site_url = getattr(settings, 'SITE_URL', 'https://vossandthornellp.org')
+    if msg.shipment:
+        return f'{site_url}/admin/tracking/emailmessage/inbox/shipment/{msg.shipment.pk}/'
+    from urllib.parse import quote
+    other_party = msg.from_email if msg.direction == 'inbound' else msg.to_email
+    return f'{site_url}/admin/tracking/emailmessage/inbox/address/{quote(other_party)}/'
+
+
+def _send_activity_notification_email(msg, eyebrow, headline, context_line, button_label):
+    """Shared builder for both directions of the "someone sent a mail on the
+    platform" notification — see send_inbound_notification_email and
+    send_outbound_notification_email below."""
     from django.utils.html import escape
 
     key = _get_api_key()
-    notify_to = getattr(settings, 'INBOUND_NOTIFY_EMAIL', '')
+    notify_to = getattr(settings, 'ACTIVITY_NOTIFY_EMAIL', '')
     if not key or not notify_to:
         return
     resend.api_key = key
 
-    site_url = getattr(settings, 'SITE_URL', 'https://vossandthornellp.org')
-    if msg.shipment:
-        link = f'{site_url}/admin/tracking/emailmessage/inbox/shipment/{msg.shipment.pk}/'
-        context_line = f'Shipment {msg.shipment.tracking_number}'
-    else:
-        from urllib.parse import quote
-        link = f'{site_url}/admin/tracking/emailmessage/inbox/address/{quote(msg.from_email)}/'
-        context_line = 'General enquiry — not linked to a shipment'
-
-    sender = escape(msg.from_name or msg.from_email)
+    headline_esc = escape(headline)
     subject_line = escape(msg.subject or '(no subject)')
     snippet = escape((msg.text_body or '')[:280])
+    link = _conversation_link(msg)
 
     html = f"""
     <tr>
       <td style="background:#ffffff;padding:36px 40px;">
         <p style="margin:0;font-family:Arial,sans-serif;font-size:10px;letter-spacing:4px;
-                  color:#c9a84c;text-transform:uppercase;">New Client Message</p>
+                  color:#c9a84c;text-transform:uppercase;">{eyebrow}</p>
         <h1 style="margin:14px 0 0;font-family:Georgia,serif;font-size:24px;color:#07070d;
-                   font-weight:normal;">{sender}</h1>
+                   font-weight:normal;">{headline_esc}</h1>
         <p style="margin:6px 0 0;font-family:Arial,sans-serif;font-size:12px;color:#999;">{context_line}</p>
         <table width="100%" cellpadding="0" cellspacing="0"
                style="margin-top:24px;background:#f7f7f2;border-left:3px solid #c9a84c;padding:18px 22px;">
@@ -624,7 +626,7 @@ def send_inbound_notification_email(msg):
           <tr><td style="background:#07070d;border-radius:2px;">
             <a href="{link}" style="display:inline-block;padding:12px 28px;font-family:Arial,sans-serif;
                      font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;
-                     color:#c9a84c;text-decoration:none;">Open in Inbox &rarr;</a>
+                     color:#c9a84c;text-decoration:none;">{button_label} &rarr;</a>
           </td></tr>
         </table>
       </td>
@@ -634,11 +636,39 @@ def send_inbound_notification_email(msg):
         resend.Emails.send({
             'from': FROM_ADDRESS,
             'to': [notify_to],
-            'subject': f'New message from {msg.from_name or msg.from_email}: {msg.subject or "(no subject)"}',
+            'subject': f'{eyebrow}: {headline} — {msg.subject or "(no subject)"}',
             'html': _wrap(_header() + html + _footer()),
         })
     except Exception as exc:
-        logger.error('Failed to send inbound notification email: %s', exc)
+        logger.error('Failed to send activity notification email: %s', exc)
+
+
+def send_inbound_notification_email(msg):
+    """Alerts ACTIVITY_NOTIFY_EMAIL whenever a new inbound EmailMessage is
+    filed, so staff don't have to keep the admin Inbox open to notice a
+    client wrote in."""
+    context_line = f'Shipment {msg.shipment.tracking_number}' if msg.shipment else 'General enquiry — not linked to a shipment'
+    _send_activity_notification_email(
+        msg,
+        eyebrow='New Client Message',
+        headline=msg.from_name or msg.from_email,
+        context_line=context_line,
+        button_label='Open in Inbox',
+    )
+
+
+def send_outbound_notification_email(msg):
+    """Alerts ACTIVITY_NOTIFY_EMAIL whenever the platform sends a mail —
+    shipment notifications, status updates, and staff replies alike — so
+    there's a record in a real inbox of everything that went out."""
+    context_line = f'Shipment {msg.shipment.tracking_number}' if msg.shipment else 'Not linked to a shipment'
+    _send_activity_notification_email(
+        msg,
+        eyebrow='Mail Sent',
+        headline=f'To {msg.to_email}',
+        context_line=context_line,
+        button_label='View conversation',
+    )
 
 
 # ── Staff reply (in-house mailing system) ──────────────────────────────────────
@@ -754,6 +784,7 @@ def send_staff_reply_email(to_email, subject, body_text, in_reply_to=None, refer
         for name, content_type, content in attachment_blobs:
             attachment = EmailAttachment(message=msg, filename=name, content_type=content_type, size=len(content))
             attachment.file.save(name, ContentFile(content), save=True)
+        send_outbound_notification_email(msg)
         logger.info('Staff reply sent → %s (%s)', to_email, shipment.tracking_number if shipment else 'no shipment')
         return result
     except Exception as exc:
