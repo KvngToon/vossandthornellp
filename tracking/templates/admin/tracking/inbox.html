@@ -2,125 +2,169 @@
 
 {% block extrahead %}
 <style>
-  .vt-inbox-page { max-width: 920px; }
-  .vt-inbox-page h1 {
-    font-family: Georgia, serif;
-    font-weight: normal;
-    color: #07070d;
+  :root {
+    --vt-paper: #efece3;
+    --vt-panel: #f6f4ec;
+    --vt-ink: #16182c;
+    --vt-ink-soft: #262a46;
+    --vt-muted: #6f7086;
+    --vt-line: #ddd8c8;
+    --vt-gold: #c9a84c;
+    --vt-gold-deep: #93762f;
+    --vt-rust: #a3402f;
+    --vt-rust-bg: #f6e7e3;
   }
+  @media (prefers-reduced-motion: reduce) {
+    .vt-page * { transition: none !important; }
+  }
+
+  .vt-page { max-width: 940px; }
+  .vt-page a:focus-visible,
+  .vt-page button:focus-visible,
+  .vt-page input:focus-visible {
+    outline: 2px solid var(--vt-gold-deep);
+    outline-offset: 2px;
+  }
+
+  .vt-page h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: normal;
+    color: var(--vt-ink);
+    margin-bottom: 4px;
+  }
+
+  .vt-recover {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    background: var(--vt-panel);
+    border: 1px solid var(--vt-gold);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--vt-ink);
+  }
+  .vt-recover button {
+    background: var(--vt-ink);
+    color: var(--vt-gold);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .vt-recover button:hover { background: var(--vt-ink-soft); }
 
   .vt-toolbar {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin: 4px 0 18px;
+    gap: 10px;
+    margin: 4px 0 16px;
     flex-wrap: wrap;
   }
   .vt-search {
     flex: 1 1 260px;
     padding: 9px 14px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 13px;
+    border: 1px solid var(--vt-line);
+    border-radius: 7px;
+    font-size: 13.5px;
+    background: #fff;
   }
   .vt-tabs { display: flex; gap: 6px; }
   .vt-tab {
-    padding: 8px 16px;
-    border-radius: 4px;
-    font-size: 12px;
-    letter-spacing: .5px;
-    text-transform: uppercase;
+    padding: 8px 14px;
+    border-radius: 7px;
+    font-size: 13px;
     text-decoration: none;
-    color: #55556a;
-    background: #f4f4f0;
-    border: 1px solid transparent;
+    color: var(--vt-muted);
+    background: var(--vt-panel);
+    border: 1px solid var(--vt-line);
   }
-  .vt-tab.active { background: #07070d; color: #c9a84c; }
+  .vt-tab.active { background: var(--vt-ink); color: var(--vt-gold); border-color: var(--vt-ink); }
 
-  .vt-inbox-list {
+  .vt-list {
     border-collapse: collapse;
     width: 100%;
     background: #fff;
-    border: 1px solid #eee;
-    border-radius: 6px;
+    border: 1px solid var(--vt-line);
+    border-radius: 10px;
     overflow: hidden;
   }
-  .vt-inbox-list tr { border-bottom: 1px solid #f0f0ec; cursor: pointer; }
-  .vt-inbox-list tr:last-child { border-bottom: none; }
-  .vt-inbox-list tr:hover { background: #f7f7f2; }
-  .vt-inbox-list td { padding: 14px 14px; vertical-align: top; }
-  .vt-inbox-list a { display: block; color: inherit; text-decoration: none; }
+  .vt-list tr { border-bottom: 1px solid var(--vt-panel); position: relative; }
+  .vt-list tr:last-child { border-bottom: none; }
+  .vt-list tr:hover { background: var(--vt-panel); }
+  .vt-list td { padding: 13px 14px; vertical-align: top; }
+  .vt-list a { color: inherit; text-decoration: none; }
+  .vt-row-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
 
-  .vt-unread-dot {
+  .vt-unread-marker {
     display: inline-block;
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #e84545;
+    background: var(--vt-rust);
   }
   .vt-unread-count {
     display: inline-block;
-    min-width: 18px;
-    padding: 1px 6px;
-    background: #e84545;
-    color: #fff;
+    min-width: 20px;
+    padding: 2px 7px;
+    background: var(--vt-rust-bg);
+    color: var(--vt-rust);
     border-radius: 10px;
     font-size: 11px;
+    font-weight: 600;
     text-align: center;
   }
-  .vt-row-strong { font-weight: 700; color: #07070d; }
-  .vt-shipment-tag {
+  .vt-strong { font-weight: 700; color: var(--vt-ink); }
+  .vt-tag {
     display: inline-block;
     margin-left: 8px;
     padding: 1px 7px;
-    background: #f4f4f0;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    font-size: 10px;
-    letter-spacing: .5px;
-    color: #555;
+    background: var(--vt-panel);
+    border: 1px solid var(--vt-line);
+    border-radius: 4px;
+    font-size: 10.5px;
+    color: var(--vt-muted);
     vertical-align: middle;
   }
-  .vt-subject { color: #1a1a2e; }
-  .vt-snippet { color: #888; font-size: 12.5px; margin-top: 2px; }
-  .vt-time { color: #999; font-size: 12px; white-space: nowrap; text-align: right; }
-  .vt-empty { color: #888; font-style: italic; padding: 30px; text-align: center; background: #fff; border: 1px dashed #ddd; border-radius: 6px; }
-  .vt-backfill-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 16px;
-    margin-bottom: 16px;
-    background: #fdf6e3;
-    border: 1px solid #e8d9a0;
-    border-radius: 6px;
-    font-size: 12.5px;
-    color: #5c4d1a;
+  .vt-subject { color: var(--vt-ink); }
+  .vt-snippet { color: var(--vt-muted); font-size: 12.5px; margin-top: 2px; }
+  .vt-time { color: var(--vt-muted); font-size: 12px; white-space: nowrap; text-align: right; }
+  .vt-empty {
+    color: var(--vt-muted);
+    font-size: 13.5px;
+    padding: 40px;
+    text-align: center;
+    background: #fff;
+    border: 1px dashed var(--vt-line);
+    border-radius: 10px;
   }
-  .vt-backfill-banner button {
-    background: #07070d;
-    color: #c9a84c;
-    border: none;
-    padding: 8px 18px;
-    border-radius: 3px;
-    letter-spacing: .5px;
-    text-transform: uppercase;
-    font-size: 11px;
-    cursor: pointer;
-    white-space: nowrap;
+  .vt-sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
   }
-  .vt-backfill-banner button:hover { background: #1a1a2e; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="vt-inbox-page">
+<div class="vt-page">
   <h1>Inbox</h1>
 
   {% if empty_count %}
-  <div class="vt-backfill-banner">
-    <span>{{ empty_count }} message{{ empty_count|pluralize }} {{ empty_count|pluralize:"is,are" }} missing body content (received before a fix went live).</span>
+  <div class="vt-recover">
+    <span>{{ empty_count }} message{{ empty_count|pluralize }} {{ empty_count|pluralize:"is,are" }} missing body content.</span>
     <form method="post" action="{% url 'admin:tracking_inbox_backfill' %}">
       {% csrf_token %}
       <button type="submit">Recover content</button>
@@ -129,8 +173,9 @@
   {% endif %}
 
   <div class="vt-toolbar">
-    <form method="get" style="flex:1 1 260px;display:flex;">
-      <input class="vt-search" type="text" name="q" value="{{ query }}" placeholder="Search name, tracking number, or subject…">
+    <form method="get" style="flex:1 1 260px;display:flex;" role="search">
+      <label for="vt-search-input" class="vt-sr-only">Search conversations</label>
+      <input id="vt-search-input" class="vt-search" type="text" name="q" value="{{ query }}" placeholder="Search name, tracking number, or subject…">
       {% if only_unread %}<input type="hidden" name="filter" value="unread">{% endif %}
     </form>
     <div class="vt-tabs">
@@ -142,23 +187,23 @@
   </div>
 
   {% if rows %}
-  <table class="vt-inbox-list">
+  <table class="vt-list">
     {% for row in rows %}
-    <tr onclick="window.location='{{ row.url }}'">
-      <td style="width:24px;">{% if row.unread %}<span class="vt-unread-dot"></span>{% endif %}</td>
+    <tr>
+      <td style="width:22px;">
+        {% if row.unread %}<span class="vt-unread-marker" aria-hidden="true"></span><span class="vt-sr-only">Unread</span>{% endif %}
+      </td>
       <td style="width:220px;">
-        <a href="{{ row.url }}">
-          <span class="{% if row.unread %}vt-row-strong{% endif %}">{{ row.title }}</span>
-          {% if row.tag %}<span class="vt-shipment-tag">{{ row.tag }}</span>{% endif %}
+        <a href="{{ row.url }}" class="vt-row-link">
+          <span class="{% if row.unread %}vt-strong{% endif %}">{{ row.title }}</span>
         </a>
+        {% if row.tag %}<span class="vt-tag">{{ row.tag }}</span>{% endif %}
       </td>
       <td>
-        <a href="{{ row.url }}">
-          <span class="vt-subject {% if row.unread %}vt-row-strong{% endif %}">{{ row.subject|default:"(no subject)" }}</span>
-          <div class="vt-snippet">{{ row.snippet }}</div>
-        </a>
+        <span class="vt-subject {% if row.unread %}vt-strong{% endif %}">{{ row.subject|default:"(no subject)" }}</span>
+        <div class="vt-snippet">{{ row.snippet }}</div>
       </td>
-      <td style="width:70px;">{% if row.unread %}<span class="vt-unread-count">{{ row.unread }}</span>{% endif %}</td>
+      <td style="width:56px;">{% if row.unread %}<span class="vt-unread-count">{{ row.unread }}</span>{% endif %}</td>
       <td class="vt-time">{{ row.last_at|timesince }} ago</td>
     </tr>
     {% endfor %}

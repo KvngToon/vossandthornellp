@@ -2,249 +2,312 @@
 
 {% block extrahead %}
 <style>
-  .vt-inbox { max-width: 760px; }
+  :root {
+    --vt-paper: #efece3;
+    --vt-panel: #f6f4ec;
+    --vt-ink: #16182c;
+    --vt-ink-soft: #262a46;
+    --vt-muted: #6f7086;
+    --vt-line: #ddd8c8;
+    --vt-gold: #c9a84c;
+    --vt-gold-deep: #93762f;
+    --vt-rust: #a3402f;
+    --vt-rust-bg: #f6e7e3;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vt-page * { transition: none !important; scroll-behavior: auto !important; }
+  }
+
+  .vt-page { max-width: 780px; }
+  .vt-page a:focus-visible,
+  .vt-page button:focus-visible,
+  .vt-page input:focus-visible,
+  .vt-page textarea:focus-visible {
+    outline: 2px solid var(--vt-gold-deep);
+    outline-offset: 2px;
+  }
+
   .vt-back {
-    display: block;
-    width: fit-content;
-    margin-bottom: 14px;
-    font-size: 12px;
-    letter-spacing: .5px;
-    text-transform: uppercase;
-    color: #767676;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--vt-muted);
     text-decoration: none;
   }
-  .vt-back:hover { color: #07070d; }
+  .vt-back:hover { color: var(--vt-ink); }
+  .vt-back svg { width: 14px; height: 14px; }
 
-  .vt-inbox-header {
-    margin-bottom: 18px;
-    padding-bottom: 14px;
-    border-bottom: 2px solid #c9a84c;
+  .vt-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--vt-line);
   }
-  .vt-inbox-header h1 {
-    margin: 0 0 4px;
-    font-family: Georgia, serif;
+  .vt-header-name {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 22px;
     font-weight: normal;
-    color: #07070d;
+    color: var(--vt-ink);
   }
-  .vt-inbox-header .subtitle { color: #767676; font-size: 13px; }
-  .vt-status-pill {
-    display: inline-block;
-    margin-left: 8px;
-    padding: 2px 9px;
-    border-radius: 3px;
-    font-size: 10px;
-    letter-spacing: .5px;
-    text-transform: uppercase;
-    background: #07070d;
-    color: #c9a84c;
-    vertical-align: middle;
+  .vt-header-meta {
+    color: var(--vt-muted);
+    font-size: 13px;
+    margin-top: 3px;
+  }
+  .vt-status {
+    font-size: 12px;
+    color: var(--vt-ink);
+    background: var(--vt-panel);
+    border: 1px solid var(--vt-line);
+    border-radius: 20px;
+    padding: 4px 12px;
+    white-space: nowrap;
   }
 
-  .vt-link-form {
-    display: inline-flex;
+  .vt-link-shipment {
+    display: flex;
+    align-items: center;
     gap: 8px;
-    margin-left: 12px;
-    vertical-align: middle;
+    margin-top: 8px;
   }
-  .vt-link-form input[type=text] {
-    padding: 4px 8px;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    font-size: 12px;
-    width: 150px;
+  .vt-link-shipment input[type=text] {
+    padding: 6px 10px;
+    border: 1px solid var(--vt-line);
+    border-radius: 5px;
+    font-size: 13px;
+    width: 160px;
+    background: #fff;
   }
-  .vt-link-form button {
-    background: transparent;
-    border: 1px solid #c9a84c;
-    color: #07070d;
-    padding: 4px 10px;
-    border-radius: 3px;
-    font-size: 11px;
-    letter-spacing: .5px;
+  .vt-link-shipment button {
+    background: none;
+    border: 1px solid var(--vt-gold-deep);
+    color: var(--vt-gold-deep);
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-size: 13px;
     cursor: pointer;
   }
-  .vt-link-form button:hover { background: #c9a84c; }
+  .vt-link-shipment button:hover { background: var(--vt-gold); border-color: var(--vt-gold); color: var(--vt-ink); }
 
   .vt-thread {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
     padding: 20px;
-    background: #f4f4f0;
-    border-radius: 6px;
-    margin-bottom: 20px;
-    max-height: 58vh;
+    background: var(--vt-panel);
+    border: 1px solid var(--vt-line);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    height: min(62vh, 620px);
     overflow-y: auto;
+    scroll-behavior: auto;
   }
-  .vt-empty { color: #888; font-style: italic; padding: 8px 0; }
+  .vt-empty {
+    margin: auto;
+    color: var(--vt-muted);
+    font-size: 13.5px;
+  }
 
-  .vt-bubble-row { display: flex; }
-  .vt-bubble-row.inbound { justify-content: flex-start; }
-  .vt-bubble-row.outbound { justify-content: flex-end; }
+  .vt-row { display: flex; }
+  .vt-row.inbound { justify-content: flex-start; }
+  .vt-row.outbound { justify-content: flex-end; }
 
   .vt-bubble {
-    max-width: 74%;
-    padding: 13px 17px;
-    border-radius: 10px;
-    line-height: 1.6;
+    max-width: 76%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    line-height: 1.55;
     font-size: 13.5px;
     white-space: pre-line;
-    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
   .vt-bubble.inbound {
     background: #ffffff;
-    border: 1px solid #e2e2dc;
-    border-bottom-left-radius: 2px;
+    border: 1px solid var(--vt-line);
+    color: var(--vt-ink);
+    border-bottom-left-radius: 3px;
   }
   .vt-bubble.outbound {
-    background: #07070d;
-    color: #eceef7;
-    border-bottom-right-radius: 2px;
+    background: var(--vt-ink);
+    color: #eeeef5;
+    border-bottom-right-radius: 3px;
   }
-  .vt-bubble .vt-meta {
+  .vt-bubble-who {
     display: block;
-    font-size: 10px;
-    letter-spacing: .6px;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-    color: #999990;
+    font-size: 11.5px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--vt-muted);
   }
-  .vt-bubble.outbound .vt-meta { color: #c9a84c; }
-  .vt-bubble .vt-subject {
+  .vt-bubble.outbound .vt-bubble-who { color: var(--vt-gold); }
+  .vt-bubble-subject {
     display: block;
-    font-weight: bold;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 14.5px;
     margin-bottom: 4px;
   }
-  .vt-bubble .vt-time {
+  .vt-bubble-empty { font-style: italic; opacity: .6; }
+  .vt-bubble-time {
     display: block;
     margin-top: 8px;
-    font-size: 10px;
-    opacity: .6;
-  }
-  .vt-no-content {
-    font-style: italic;
+    font-size: 10.5px;
     opacity: .55;
   }
+
   .vt-attachments {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
     margin-top: 10px;
   }
-  .vt-attachment-chip {
-    display: inline-block;
+  .vt-attachment {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     padding: 5px 10px;
-    border-radius: 4px;
+    border-radius: 20px;
     font-size: 11.5px;
     text-decoration: none;
   }
-  .vt-bubble.inbound .vt-attachment-chip {
-    background: #f4f4f0;
-    color: #1a1a2e;
-    border: 1px solid #ddd;
+  .vt-attachment svg { width: 12px; height: 12px; flex-shrink: 0; }
+  .vt-bubble.inbound .vt-attachment { background: var(--vt-panel); color: var(--vt-ink); border: 1px solid var(--vt-line); }
+  .vt-bubble.outbound .vt-attachment { background: rgba(201,168,76,.18); color: #eeeef5; border: 1px solid rgba(201,168,76,.4); }
+  .vt-attachment-size { opacity: .65; }
+
+  .vt-composer {
+    background: #fff;
+    border: 1px solid var(--vt-line);
+    border-radius: 10px;
+    padding: 16px 18px;
   }
-  .vt-bubble.outbound .vt-attachment-chip {
-    background: rgba(201,168,76,.15);
-    color: #eceef7;
-    border: 1px solid rgba(201,168,76,.35);
-  }
-  .vt-attachment-size { opacity: .6; }
-  .vt-attachment-note {
-    font-size: 11px;
-    color: #999;
-    margin: 4px 0 12px;
-  }
-  .vt-form-error {
-    background: #fdeaea;
-    color: #a12e2e;
-    border: 1px solid #f0c4c4;
-    border-radius: 4px;
-    padding: 8px 12px;
-    font-size: 12.5px;
+  .vt-error {
+    background: var(--vt-rust-bg);
+    color: var(--vt-rust);
+    border: 1px solid #e5c3ba;
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 13px;
     margin-bottom: 12px;
   }
-
-  .vt-reply-box {
-    background: #fff;
-    border: 1px solid #e2e2dc;
-    border-radius: 6px;
-    padding: 18px 20px;
+  .vt-composer p { margin: 0 0 10px; }
+  .vt-composer label {
+    display: block;
+    font-size: 11.5px;
+    color: var(--vt-muted);
+    margin-bottom: 4px;
   }
-  .vt-reply-box h2 {
-    margin: 0 0 14px;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #c9a84c;
-  }
-  .vt-reply-box .form-row { padding: 6px 0; }
-  .vt-reply-box input[type=text],
-  .vt-reply-box input[type=email],
-  .vt-reply-box textarea {
+  .vt-composer input[type=text],
+  .vt-composer input[type=email],
+  .vt-composer textarea {
     width: 100%;
     box-sizing: border-box;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 8px 10px;
+    border: 1px solid var(--vt-line);
+    border-radius: 6px;
+    padding: 9px 11px;
+    font-size: 13.5px;
+    font-family: inherit;
+    background: var(--vt-panel);
   }
-  .vt-reply-box input[type=submit] {
-    background: #07070d;
-    color: #c9a84c;
-    border: none;
-    padding: 10px 26px;
-    border-radius: 3px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+  .vt-composer textarea { min-height: 96px; resize: vertical; }
+  .vt-composer input[type=text]:focus,
+  .vt-composer input[type=email]:focus,
+  .vt-composer textarea:focus {
+    background: #fff;
+    border-color: var(--vt-gold-deep);
+  }
+  .vt-composer-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .vt-storage-note {
     font-size: 11px;
-    cursor: pointer;
+    color: var(--vt-muted);
+    max-width: 60%;
   }
-  .vt-reply-box input[type=submit]:hover { background: #1a1a2e; }
+  .vt-send {
+    background: var(--vt-ink);
+    color: var(--vt-gold);
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .vt-send:hover { background: var(--vt-ink-soft); }
+
+  .vt-sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="vt-inbox">
-  <a class="vt-back" href="{% url 'admin:tracking_inbox' %}">&larr; Back to Inbox</a>
+<div class="vt-page">
+  <a class="vt-back" href="{% url 'admin:tracking_inbox' %}">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg>
+    Inbox
+  </a>
 
-  <div class="vt-inbox-header">
-    <h1>
-      {% if shipment %}{{ shipment.receiver_name }}{% else %}{{ address }}{% endif %}
-      {% if shipment %}<span class="vt-status-pill">{{ shipment.status }}</span>{% endif %}
-    </h1>
-    <div class="subtitle">
-      {% if shipment %}
-        {{ shipment.tracking_number }} · {{ shipment.origin_city }} &rarr; {{ shipment.destination_city }} · {{ address }}
-      {% else %}
-        Not linked to a shipment
-        <form method="post" action="{% url 'admin:tracking_inbox_link_shipment' address %}" class="vt-link-form">
+  <div class="vt-header">
+    <div>
+      <h1 class="vt-header-name">{% if shipment %}{{ shipment.receiver_name }}{% else %}{{ address }}{% endif %}</h1>
+      <div class="vt-header-meta">
+        {% if shipment %}
+          {{ shipment.tracking_number }} — {{ shipment.origin_city }} to {{ shipment.destination_city }}
+        {% else %}
+          {{ address }}
+        {% endif %}
+      </div>
+      {% if not shipment %}
+        <form method="post" action="{% url 'admin:tracking_inbox_link_shipment' address %}" class="vt-link-shipment">
           {% csrf_token %}
-          <input type="text" name="tracking_number" placeholder="VT-2026-XXXXXX" required>
-          <button type="submit">Link to shipment</button>
+          <label for="vt-tracking-input" class="vt-sr-only">Tracking number to link this conversation to</label>
+          <input id="vt-tracking-input" type="text" name="tracking_number" placeholder="Link a tracking number…" required>
+          <button type="submit">Link</button>
         </form>
       {% endif %}
     </div>
+    {% if shipment %}<span class="vt-status">{{ shipment.status }}</span>{% endif %}
   </div>
 
-  <div class="vt-thread">
+  <div class="vt-thread" id="vt-thread">
     {% if thread %}
       {% for msg in thread %}
-        <div class="vt-bubble-row {{ msg.direction }}">
+        <div class="vt-row {{ msg.direction }}">
           <div class="vt-bubble {{ msg.direction }}">
-            <span class="vt-meta">
+            <span class="vt-bubble-who">
               {% if msg.direction == 'inbound' %}{{ msg.from_name|default:msg.from_email }}{% else %}Voss &amp; Thorne{% endif %}
             </span>
-            {% if msg.subject %}<span class="vt-subject">{{ msg.subject }}</span>{% endif %}
-            {% if msg.text_body %}{{ msg.text_body }}{% else %}<span class="vt-no-content">(no content)</span>{% endif %}
+            {% if msg.subject %}<span class="vt-bubble-subject">{{ msg.subject }}</span>{% endif %}
+            {% if msg.text_body %}{{ msg.text_body }}{% else %}<span class="vt-bubble-empty">No message content</span>{% endif %}
             {% if msg.attachments.all %}
               <div class="vt-attachments">
                 {% for att in msg.attachments.all %}
-                  <a href="{{ att.file.url }}" target="_blank" rel="noopener" class="vt-attachment-chip">
-                    📎 {{ att.filename }} <span class="vt-attachment-size">({{ att.size|filesizeformat }})</span>
+                  <a href="{{ att.file.url }}" target="_blank" rel="noopener" class="vt-attachment">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M11 5.5 6.7 9.8a2 2 0 1 0 2.8 2.8l4.3-4.3a3.5 3.5 0 1 0-5-5L4.5 7.7a5 5 0 1 0 7 7"/></svg>
+                    {{ att.filename }} <span class="vt-attachment-size">{{ att.size|filesizeformat }}</span>
                   </a>
                 {% endfor %}
               </div>
             {% endif %}
-            <span class="vt-time">{{ msg.created_at|date:"M j, g:i A" }} &middot; {{ msg.created_at|timesince }} ago</span>
+            <span class="vt-bubble-time">{{ msg.created_at|date:"M j, g:i A" }}</span>
           </div>
         </div>
       {% endfor %}
@@ -252,17 +315,24 @@
       <div class="vt-empty">No messages yet with {% if shipment %}{{ shipment.receiver_name }}{% else %}{{ address }}{% endif %}.</div>
     {% endif %}
   </div>
+  <script>
+    (function () {
+      var thread = document.getElementById('vt-thread');
+      if (thread) thread.scrollTop = thread.scrollHeight;
+    })();
+  </script>
 
-  <div class="vt-reply-box">
-    <h2>Reply</h2>
+  <div class="vt-composer">
     {% if form.non_field_errors %}
-      <div class="vt-form-error">{{ form.non_field_errors|striptags }}</div>
+      <div class="vt-error">{{ form.non_field_errors|striptags }}</div>
     {% endif %}
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
       {{ form.as_p }}
-      <p class="vt-attachment-note">Files sent here are delivered permanently, but may not stay downloadable from this page after a future deploy.</p>
-      <input type="submit" value="Send">
+      <div class="vt-composer-foot">
+        <p class="vt-storage-note">Attachments send permanently but may not stay downloadable here after a future deploy.</p>
+        <button type="submit" class="vt-send">Send</button>
+      </div>
     </form>
   </div>
 </div>
