@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 from django.contrib import admin
 from django.contrib import messages
@@ -6,6 +8,17 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 
 from .models import EmailMessage, Shipment, ShipmentEvent
+
+_REPLY_PREFIX_RE = re.compile(r'^\s*(re|fw|fwd)\s*(\[\d+\])?\s*:\s*', re.IGNORECASE)
+
+
+def _reply_subject(subject):
+    """Prepend exactly one 'Re: ', stripping any existing Re:/Fw:/Fwd:
+    prefix first — repeated replies were stacking a new 'Re: ' on top of
+    whatever was already there (Re: Re: Re: ... on every send)."""
+    subject = subject or 'your message'
+    bare = _REPLY_PREFIX_RE.sub('', subject).strip()
+    return f'Re: {bare}'
 
 
 class ShipmentEventInline(admin.TabularInline):
@@ -374,7 +387,7 @@ class EmailMessageAdmin(admin.ModelAdmin):
 
         initial = {
             'to_email': address or (shipment.receiver_email if shipment else ''),
-            'subject': f'Re: {last_message.subject}' if last_message and last_message.subject else 'Re: your message',
+            'subject': _reply_subject(last_message.subject if last_message else None),
         }
 
         if request.method == 'POST':
