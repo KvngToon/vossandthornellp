@@ -66,6 +66,9 @@ DATABASES = {
         conn_max_age=600,
     )
 }
+# Supabase's pooler drops idle SSL connections; without this, Django reuses a
+# dead connection and returns 500s with "SSL connection has been closed".
+DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 
 # ── Password validation ───────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
