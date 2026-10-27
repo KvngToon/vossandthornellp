@@ -149,7 +149,7 @@ class InvestorProfileAdmin(DemoDeleteMixin, admin.ModelAdmin):
                         context['error'] = f'Nothing was created. Server setting missing: {exc}'
                     else:
                         self._log_demo(request, f'Created demo data ({made} new investment(s), {years} year(s) back{", rebuilding existing demo accounts" if rebuild else ""}).')
-                        context.update(created=True, made=made, credentials=seeder.credentials)
+                        context.update(created=True, made=made, credentials=seeder.credentials, elapsed=round(seeder.elapsed, 1))
             elif action == 'remove':
                 if typed != self.REMOVE_PHRASE:
                     context['error'] = f'Type {self.REMOVE_PHRASE} exactly to confirm.'

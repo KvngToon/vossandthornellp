@@ -47,7 +47,7 @@ class SeedDemoTests(TempDocumentStorage, TestCase):
         self.assertEqual(Transaction.objects.filter(investment__investor=demo, type='deposit').count(), 5)
         self.assertTrue(Transaction.objects.filter(investment__investor=demo, type='interest_credit').exists())
         self.assertTrue(Transaction.objects.filter(investment__investor=demo, type='payout').exists())
-        self.assertTrue(InvestorProfile.objects.filter(user__username='demo-other').exists())
+        self.assertTrue(InvestorProfile.objects.filter(user__username='colin-firth').exists())
 
     def test_years_back_controls_how_far_back_history_goes(self):
         seed('--years-back=2')
@@ -182,7 +182,7 @@ class RichDemoDataTests(TestCase):
 
     def test_every_demo_account_has_a_plan_that_started_six_years_ago(self):
         six_years_ago = add_months(date.today(), -72)
-        self.assertEqual(self.profiles().count(), 6)
+        self.assertEqual(self.profiles().count(), 3)
         for profile in self.profiles():
             oldest = min(profile.investments.values_list('start_date', flat=True))
             if profile.user.username == 'colin-firth':
@@ -235,7 +235,22 @@ class RichDemoDataTests(TestCase):
             seen.add((wr.investor_id, account))
         self.assertGreater(len(seen), 6)
 
+    def test_exactly_three_accounts_are_seeded_and_the_rest_are_only_fill_styles(self):
+        from investors.demo_data import INVESTORS, SEEDED, STYLES
+        self.assertEqual(sorted(s['username'] for s in SEEDED), ['colin-firth', 'demo', 'demo-chidi'])
+        self.assertEqual(set(self.profiles().values_list('user__username', flat=True)), {'colin-firth', 'demo', 'demo-chidi'})
+        self.assertEqual(set(STYLES), {i['username'] for i in INVESTORS})          # all styles stay selectable
+        self.assertFalse(InvestorProfile.objects.filter(user__username__in=['demo-elena', 'demo-astrid', 'demo-other']).exists())
+
+    def test_no_pdf_documents_are_created_by_default(self):
+        self.assertEqual(Document.objects.count(), 0)
+        from investors import demo_data
+        self.assertFalse(demo_data.INCLUDE_DOCUMENTS)
+
     def test_annual_statements_cover_the_older_year_ends(self):
+        from investors import demo_data
+        with mock.patch.object(demo_data, 'INCLUDE_DOCUMENTS', True):
+            seed('--reset')
         for profile in self.profiles():
             titles = set(profile.documents.values_list('title', flat=True))
             self.assertIn(f'{date.today().year - 1} Annual Statement', titles | {f'{date.today().year - 1} Annual Statement'})
@@ -243,7 +258,7 @@ class RichDemoDataTests(TestCase):
             self.assertTrue(any(t.startswith('Q') for t in titles), profile.user.username)
 
     def test_portal_pages_all_open_for_the_long_history_accounts(self):
-        for username in ('demo', 'demo-elena', 'demo-astrid', 'demo-other'):
+        for username in ('demo', 'colin-firth'):
             self.client.logout()
             self.client.post('/investors/login/', {'username': username, 'password': 'DemoPass-12345!'})
             for url in ('/investors/', '/investors/performance/', '/investors/documents/', '/investors/withdrawals/'):
@@ -262,6 +277,9 @@ class RichDemoDataTests(TestCase):
         return min(Investment.objects.filter(investor__user__username=username).values_list('start_date', flat=True))
 
     def test_documents_are_real_pdfs_owned_correctly(self):
+        from investors import demo_data
+        with mock.patch.object(demo_data, 'INCLUDE_DOCUMENTS', True):
+            seed('--reset')
         docs = Document.objects.all()
         self.assertTrue(docs.filter(kind='statement').exists() and docs.filter(kind='agreement').exists())
         for doc in docs:
@@ -289,9 +307,9 @@ class RichDemoDataTests(TestCase):
         self.assertRedirects(r, '/investors/change-password/', fetch_redirect_response=False)
 
     def test_other_demo_accounts_sign_in_and_see_only_their_own_data(self):
-        self.client.post('/investors/login/', {'username': 'demo-elena', 'password': 'DemoPass-12345!'})
+        self.client.post('/investors/login/', {'username': 'colin-firth', 'password': 'DemoPass-12345!'})
         page = self.client.get('/investors/').content.decode()
-        self.assertIn('Founders Circle Note', page)
+        self.assertIn('Firth Family Growth Plan', page)
         self.assertNotIn('Heritage Growth Plan', page)
 
     def test_all_demo_emails_are_example_dot_com(self):

@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from investors.demo_data import INVESTORS, PASSWORD, DemoDataError, DemoSeeder
+from investors.demo_data import PASSWORD, DemoDataError, DemoSeeder
 
 
 class Command(BaseCommand):
@@ -37,7 +37,7 @@ class Command(BaseCommand):
             raise CommandError(str(exc))
 
         self.stdout.write(self.style.SUCCESS(
-            f'Demo data ready ({made} investment(s) created; oldest starts about {years} year(s) back). All of it is fake.'))
+            f'Demo data ready ({made} investment(s) created; oldest starts about {years} year(s) back). All of it is fake. ({seeder.elapsed:.1f}s)'))
         self.stdout.write('')
         self.stdout.write(f'  Sign in at /investors/login/ (all passwords: {PASSWORD} unless noted)')
         for username, name, password, note in seeder.credentials:

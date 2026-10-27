@@ -88,7 +88,7 @@ class FillingTests(Base):
         self.assertGreaterEqual(max(t['value'] for t in totals), Decimal('570000'))
         self.assertGreaterEqual(p.withdrawals.filter(status='completed').count(), 3)
         self.assertGreaterEqual(p.withdrawals.filter(status='declined').count(), 2)
-        self.assertTrue(p.documents.filter(kind='statement').exists() and p.documents.filter(kind='agreement').exists())
+        self.assertEqual(p.documents.count(), 0)                     # no PDFs
         self.assertEqual(p.payout_accounts.first().holder_name, 'Demo One')            # uses the account's own name
         self.assertTrue(all(wr.holder_name in ('', 'Demo One') for wr in p.withdrawals.all()))
         send.assert_not_called()
@@ -161,6 +161,7 @@ class SafetyTests(Base):
         self.assertContains(self.post([p]), 'already has data')
         self.assertEqual(p.investments.count(), count)
 
+    @mock.patch('investors.demo_data.INCLUDE_DOCUMENTS', True)   # this test is about stored PDFs being replaced
     def test_replace_rebuilds_only_the_selected_account_and_removes_its_files(self):
         target, bystander = self.make('d1', 'Demo One'), self.make('d2', 'Demo Two')
         self.post([target, bystander])

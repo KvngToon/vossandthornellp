@@ -10,17 +10,19 @@ run in production). Safety rules, enforced here so every caller gets them:
   bulk_create so no signal can send anything.
 """
 import logging
+import time as clock  # `time` is already datetime.time in this file
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 
 from .models import (Document, Investment, InvestorProfile, NotificationLog, PayoutAccount, Transaction,
-                     ValuationSnapshot, WithdrawalRequest)
+                     ValuationSnapshot, WithdrawalRequest, _withdrawal_reference)
 from .passwords import generate_temporary_password
 from .services import add_months, months_between, projected_value, value_on
 
@@ -60,7 +62,7 @@ INVESTORS = [
               ('Income Plan', 30, 6, 'declined', 'typed', 'VERIFY'), ('Capital Preservation Note', 24, 7, 'completed', 'typed'),
               ('Quarterly Compounder', 16, 3, 'declined', 'offline', 'LIMIT'), ('Heritage Growth Plan', 10, 4, 'completed', 'saved')],
          note='The fullest account: 5 plans, statements, accounts on file, and withdrawal requests in every status, old and new.'),
-    dict(username='demo-elena', email='elena.marsh@example.com', name='Elena Marsh', phone='+1 415 555 0192',
+    dict(seed=False, username='demo-elena', email='elena.marsh@example.com', name='Elena Marsh', phone='+1 415 555 0192',
          plans=[
              ('Founders Circle Note', '300000', '10', 'annual', 'maturity', 'USD', 1.00, 12, 48, True),
              ('Atlantic Income Plan', '150000', '8', 'simple', 'periodic', 'USD', 0.70, 12, 30, False),
@@ -70,7 +72,7 @@ INVESTORS = [
               ('Atlantic Income Plan', 38, 4, 'declined', 'offline', 'EARLY'), ('Short-Term Bridge', 30, 8, 'completed', 'typed'),
               ('Founders Circle Note', 22, 3, 'declined', 'typed', 'VERIFY'), ('Atlantic Income Plan', 12, 3, 'completed', 'saved')],
          note='Large USD portfolio with a matured plan; old paid and declined withdrawals plus a completed and an approved recent one.'),
-    dict(username='demo-astrid', email='astrid.lindqvist@example.com', name='Astrid Lindqvist', phone='+1 646 555 0107',
+    dict(seed=False, username='demo-astrid', email='astrid.lindqvist@example.com', name='Astrid Lindqvist', phone='+1 646 555 0107',
          plans=[
              ('Nordic Income Plan', '200000', '6', 'simple', 'periodic', 'EUR', 1.00, 9, 27, False),
              ('Euro Reserve', '150000', '5', 'annual', 'maturity', 'EUR', 0.80, 6, 30, True),
@@ -103,7 +105,7 @@ INVESTORS = [
               ('Cornerstone Income Note', 24, 5, 'declined', 'typed', 'VERIFY'), ('Euro Reserve', 14, 4, 'completed', 'typed'),
               ('Firth Family Growth Plan', 9, 3, 'declined', 'offline', 'LIMIT')],
          note='Colin Firth: always created with the demo data. Over $1M, a record since January 2020, an account on file and open requests.'),
-    dict(username='demo-other', email='other.investor@example.com', name='Other Investor', phone='+1 202 555 0134',
+    dict(seed=False, username='demo-other', email='other.investor@example.com', name='Other Investor', phone='+1 202 555 0134',
          plans=[
              ('Private Plan', '400000', '8', 'annual', 'maturity', 'USD', 1.00, 6, 36, True),
              ('Reserve Plan', '150000', '7', 'annual', 'maturity', 'USD', 0.60, 6, 30, False),
@@ -113,6 +115,12 @@ INVESTORS = [
               ('Private Plan', 14, 3, 'completed', 'offline')],
          note='Second account, for checking that investors cannot see each other.'),
 ]
+# Only these are created when the demo data is seeded; the others stay available as styles for the admin's
+# 'Fill with demo history' action. Fewer accounts means fewer database round trips per click.
+SEEDED = [i for i in INVESTORS if i.get('seed', True)]
+# PDF statements/agreements are not generated: each is a file upload to Supabase Storage, and the Demo data
+# button has to finish inside one web request. Flip to True (tests do) to generate them again.
+INCLUDE_DOCUMENTS = False
 DEMO_USERNAMES = tuple(i['username'] for i in INVESTORS)
 STYLES = {
     'demo': 'Mixed USD and EUR portfolio: 5 plans, accounts on file, withdrawals in every status',
@@ -205,6 +213,54 @@ class DemoSeeder:
         self.random_passwords = random_passwords
         self.today = today or date.today()
         self.credentials = []   # (username, display name, password, note) for every account created or reset
+        self.elapsed = 0.0
+        self.deadline = None
+        self._used_refs = {}    # reference numbers already taken, loaded once instead of one query per row
+        self._wr_batch, self._tx_batch = [], []
+
+    # ── round-trip savers ────────────────────────────────────────────────────────────────────────
+    def _check_time(self):
+        """Stop cleanly (the whole run rolls back) before the web server would kill the worker."""
+        if self.deadline is not None and clock.monotonic() > self.deadline:
+            raise DemoDataError(
+                'Stopped after taking too long, so nothing was created. The database is responding slowly or the '
+                "server's request timeout is too short: make sure the Render Start Command includes --timeout 90, then try again.")
+
+    def _reference(self, kind):
+        """A fresh reference number, checked against a set loaded once (the model's own check is one query per row)."""
+        if kind not in self._used_refs:
+            model = Investment if kind == 'inv' else WithdrawalRequest
+            self._used_refs[kind] = set(model.objects.values_list('reference', flat=True))
+        while True:
+            ref = Investment()._generate_reference() if kind == 'inv' else _withdrawal_reference()
+            if ref not in self._used_refs[kind]:
+                self._used_refs[kind].add(ref)
+                return ref
+
+    def _queue(self, wr, ledger_date=None):
+        """Hold a withdrawal request (and its ledger row, if it was paid) for one batched insert."""
+        wr.reference = self._reference('wr')
+        wr._ledger_note = None
+        if ledger_date is not None:
+            wr._ledger_note = f'Withdrawal {wr.reference}'
+            self._tx_batch.append(Transaction(investment=wr.investment, type='withdrawal', amount=wr.amount,
+                                              date=ledger_date, note=wr._ledger_note))
+        self._wr_batch.append(wr)
+
+    def flush_withdrawals(self):
+        txs, wrs = self._tx_batch, self._wr_batch
+        self._tx_batch, self._wr_batch = [], []
+        if txs:
+            Transaction.objects.bulk_create(txs)  # bulk_create skips signals: history must never email anyone
+            if any(t.pk is None for t in txs):    # a backend that can't return ids: look them up in one query
+                found = {t.note: t for t in Transaction.objects.filter(type='withdrawal', note__in=[t.note for t in txs])}
+                txs = [found[t.note] for t in txs]
+        by_note = {t.note: t for t in txs}
+        for wr in wrs:
+            if wr._ledger_note:
+                wr.transaction = by_note[wr._ledger_note]
+        if wrs:
+            WithdrawalRequest.objects.bulk_create(wrs)
 
     # ── public API ───────────────────────────────────────────────────────────────────────────────
     def run(self, reset=False, rebuild_custom=False):
@@ -212,10 +268,16 @@ class DemoSeeder:
 
         `reset` deletes the named demo accounts' data first. `rebuild_custom` extends that to demo accounts
         that carry a superuser's own email (so an adopted account is rebuilt too)."""
-        with transaction.atomic():
-            if reset or rebuild_custom:
-                self.clear_data(self.demo_profiles(any_email=rebuild_custom))
-            return sum(self.seed_investor(spec) for spec in INVESTORS)
+        started = clock.monotonic()
+        self.deadline = started + getattr(settings, 'DEMO_SEED_MAX_SECONDS', 75)
+        try:
+            with transaction.atomic():
+                if reset or rebuild_custom:
+                    self.clear_data(self.demo_profiles(any_email=rebuild_custom))
+                return sum(self.seed_investor(spec) for spec in SEEDED)
+        finally:
+            self.elapsed = clock.monotonic() - started
+            logger.info('Demo data run took %.1fs', self.elapsed)
 
     def clear_data(self, profiles=None):
         """Delete demo accounts' data but keep the accounts themselves (the five named ones by default)."""
@@ -300,6 +362,7 @@ class DemoSeeder:
     def populate(self, profile, spec):
         """Build the plans, ledger, withdrawals, valuations and documents described by `spec` for an
         existing demo profile. Never touches the profile's login, email or name."""
+        self._check_time()
         investments = [self.make_plan(profile, spec, plan) for plan in spec['plans']]
         accounts = list(profile.payout_accounts.filter(is_verified=True)) or (
             self.make_accounts(profile, spec) if spec['accounts'] else [])
@@ -307,14 +370,16 @@ class DemoSeeder:
             self.make_withdrawals(profile, investments, accounts, spec['withdrawals'])
         if spec.get('old'):
             self.make_old_withdrawals(profile, investments, accounts, spec['old'])
+        self.flush_withdrawals()   # one batched insert; snapshots below read the ledger back
         for inv in investments:
+            self._check_time()
             if inv.wants_snapshots:
                 self.make_snapshots(inv)
-        if spec.get('documents', True):
+        if INCLUDE_DOCUMENTS and spec.get('documents', True):
             fresh = list(Investment.objects.filter(pk__in=[i.pk for i in investments])
                          .prefetch_related('snapshots', 'transactions').order_by('pk'))
             self.make_documents(profile, fresh)
-            self.make_notifications(profile)
+        self.make_notifications(profile)
         return len(investments)
 
     def fill_profile(self, profile, template='demo', replace=False):
@@ -332,6 +397,7 @@ class DemoSeeder:
                     or profile.documents.exists())
         if has_data and not replace:
             raise DemoDataError(f'{profile.display_name} already has data. Choose "replace" to rebuild it, or leave it as it is.')
+        self.deadline = clock.monotonic() + getattr(settings, 'DEMO_SEED_MAX_SECONDS', 75)
         with transaction.atomic():
             if has_data:
                 self.clear_data(InvestorProfile.objects.filter(pk=profile.pk))
@@ -346,7 +412,7 @@ class DemoSeeder:
             months_back = months_between(start, self.today)
         maturity = add_months(self.today, beyond)
         inv = Investment.objects.create(
-            investor=profile, plan_name=name, principal=Decimal(principal), annual_rate=Decimal(rate),
+            reference=self._reference('inv'), investor=profile, plan_name=name, principal=Decimal(principal), annual_rate=Decimal(rate),
             compounding=comp, payout_mode=payout, currency=currency, start_date=start, maturity_date=maturity,
             status='active' if beyond > 0 else 'matured',
         )
@@ -429,47 +495,36 @@ class DemoSeeder:
             wr.payout_account, wr.destination_label = acct, f'{acct.label} ({acct.masked})'
             return wr
 
-        def complete(wr, days_ago):
-            tx = Transaction(investment=wr.investment, type='withdrawal', amount=wr.amount,
-                             date=self.today - timedelta(days=days_ago), note='')
-            Transaction.objects.bulk_create([tx])
-            tx = Transaction.objects.filter(investment=wr.investment, type='withdrawal', date=tx.date, note='').latest('id')
-            wr.transaction, wr.decided_at = tx, timezone.now() - timedelta(days=days_ago)
-            wr.save()
-            tx.note = f'Withdrawal {wr.reference}'
-            tx.save()
-
         if which == 'demo':
             heritage, quarterly = by_name['Heritage Growth Plan'], by_name['Quarterly Compounder']
             done = typed(request(heritage, '5000', 'completed', 41, 'typed', callback_verified=True,
-                                 staff_note='Called investor on file number 14 Sept; confirmed.'),
+                                 staff_note='Called investor on file number 14 Sept; confirmed.',
+                                 decided_at=timezone.now() - timedelta(days=38)),
                          profile.display_name, 'Chase', '123456789', TEST_ROUTING_JPM)
-            done.save()
-            complete(done, 38)
-            declined = request(quarterly, '20000', 'declined', 20, 'offline', destination_label='To be arranged with staff',
-                               decline_reason="Early withdrawal of this amount before the plan's maturity date is not permitted "
-                                              'under its terms. You may request up to the interest accrued to date.',
-                               decided_at=timezone.now() - timedelta(days=18))
-            declined.save()
-            typed(request(heritage, '2500', 'under_review', 4, 'typed'),
-                  profile.display_name, 'Wells Fargo', '88442266771', TEST_ROUTING_BOA).save()
-            saved(request(quarterly, '1200', 'submitted', 1, 'saved'), accounts[0]).save()
-            request(heritage, '800', 'cancelled', 9, 'offline', destination_label='To be arranged with staff',
-                    decided_at=timezone.now() - timedelta(days=9)).save()
+            self._queue(done, ledger_date=self.today - timedelta(days=38))
+            self._queue(request(quarterly, '20000', 'declined', 20, 'offline', destination_label='To be arranged with staff',
+                                decline_reason="Early withdrawal of this amount before the plan's maturity date is not permitted "
+                                               'under its terms. You may request up to the interest accrued to date.',
+                                decided_at=timezone.now() - timedelta(days=18)))
+            self._queue(typed(request(heritage, '2500', 'under_review', 4, 'typed'),
+                              profile.display_name, 'Wells Fargo', '88442266771', TEST_ROUTING_BOA))
+            self._queue(saved(request(quarterly, '1200', 'submitted', 1, 'saved'), accounts[0]))
+            self._queue(request(heritage, '800', 'cancelled', 9, 'offline', destination_label='To be arranged with staff',
+                                decided_at=timezone.now() - timedelta(days=9)))
         elif which == 'colin':
             growth, income = by_name['Firth Family Growth Plan'], by_name['Cornerstone Income Note']
-            saved(request(growth, '8000', 'submitted', 2, 'saved'), accounts[0]).save()
-            typed(request(income, '3500', 'approved', 7, 'typed', callback_verified=True,
-                          staff_note='Callback done; payment scheduled.'),
-                  profile.display_name, 'Wells Fargo', '55120487391', TEST_ROUTING_BOA).save()
+            self._queue(saved(request(growth, '8000', 'submitted', 2, 'saved'), accounts[0]))
+            self._queue(typed(request(income, '3500', 'approved', 7, 'typed', callback_verified=True,
+                                      staff_note='Callback done; payment scheduled.'),
+                              profile.display_name, 'Wells Fargo', '55120487391', TEST_ROUTING_BOA))
         elif which == 'elena':
             founders, bridge = by_name['Founders Circle Note'], by_name['Short-Term Bridge']
-            done = saved(request(founders, '15000', 'completed', 60, 'saved', callback_verified=True), accounts[0])
-            done.save()
-            complete(done, 55)
-            typed(request(bridge, '12000', 'approved', 6, 'typed', callback_verified=True,
-                          staff_note='Callback done; payment scheduled.'),
-                  profile.display_name, 'Bank of America', '4402198765', TEST_ROUTING_BOA).save()
+            self._queue(saved(request(founders, '15000', 'completed', 60, 'saved', callback_verified=True,
+                                      decided_at=timezone.now() - timedelta(days=55)), accounts[0]),
+                        ledger_date=self.today - timedelta(days=55))
+            self._queue(typed(request(bridge, '12000', 'approved', 6, 'typed', callback_verified=True,
+                                      staff_note='Callback done; payment scheduled.'),
+                              profile.display_name, 'Bank of America', '4402198765', TEST_ROUTING_BOA))
 
     # ── years of earlier withdrawals, paid and declined ─────────────────────────────────────────
     def make_old_withdrawals(self, profile, investments, accounts, scenarios):
@@ -499,12 +554,7 @@ class DemoSeeder:
                 wr.destination_label = 'To be arranged with staff'
             if outcome == 'declined':
                 wr.decline_reason = DECLINE_REASONS[reason[0]]
-            wr.save()
-            if outcome == 'completed':
-                tx = Transaction(investment=inv, type='withdrawal', amount=amount, date=when, note=f'Withdrawal {wr.reference}')
-                Transaction.objects.bulk_create([tx])
-                wr.transaction = Transaction.objects.get(investment=inv, type='withdrawal', note=tx.note)
-                wr.save()
+            self._queue(wr, ledger_date=when if outcome == 'completed' else None)
 
     # ── statements and agreements ────────────────────────────────────────────────────────────────
     def make_documents(self, profile, investments):

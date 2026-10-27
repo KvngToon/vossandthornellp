@@ -31,14 +31,14 @@ class SeedingStaysQueryLightTests(TestCase):
     def test_full_seeding_stays_under_a_query_budget(self):
         with CaptureQueriesContext(connection) as ctx:
             DemoSeeder(random_passwords=True).run()
-        # ~350 today; the slow version made ~1,700. Fail loudly well before it gets slow again.
-        self.assertLess(len(ctx), 600, f'seeding now runs {len(ctx)} queries')
+        # Fail loudly well before it gets slow again.
+        self.assertLess(len(ctx), 150, f'seeding now runs {len(ctx)} queries')  # ~90 today; the slow version made ~1,700
 
     def test_rebuild_stays_under_a_query_budget_too(self):
         DemoSeeder().run()
         with CaptureQueriesContext(connection) as ctx:
             DemoSeeder(random_passwords=True).run(rebuild_custom=True)
-        self.assertLess(len(ctx), 700, f'rebuild now runs {len(ctx)} queries')
+        self.assertLess(len(ctx), 200, f'rebuild now runs {len(ctx)} queries')
 
     def test_monthly_valuations_are_computed_without_rereading_the_database(self):
         DemoSeeder().run()
@@ -100,6 +100,9 @@ class ParallelHelperTests(TestCase):
 @override_settings(FIELD_ENCRYPTION_KEY=KEY)
 class FileCleanupTests(TestCase):
     def setUp(self):
+        patcher = mock.patch.object(demo_data, 'INCLUDE_DOCUMENTS', True)   # these tests are about stored files
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         field = Document._meta.get_field('file')
@@ -139,3 +142,65 @@ class FileCleanupTests(TestCase):
         with mock.patch.object(FileSystemStorage, 'delete', autospec=True, side_effect=flaky):
             DemoSeeder().clear_data()
         self.assertEqual(Document.objects.count(), 0)   # rows are all gone even though one file failed
+
+
+@override_settings(FIELD_ENCRYPTION_KEY=KEY)
+class BatchedInsertTests(TestCase):
+    """Withdrawals and their ledger rows are inserted in batches with pre-checked reference numbers."""
+
+    def setUp(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        field = Document._meta.get_field('file')
+        keep, field.storage = field.storage, FileSystemStorage(location=tmp)
+        self.addCleanup(setattr, field, 'storage', keep)
+
+    def test_references_are_unique_and_never_collide_with_existing_ones(self):
+        from investors.models import WithdrawalRequest
+        DemoSeeder().run()
+        existing = set(Investment.objects.values_list('reference', flat=True)) | set(WithdrawalRequest.objects.values_list('reference', flat=True))
+        DemoSeeder().run(rebuild_custom=True)
+        refs = list(WithdrawalRequest.objects.values_list('reference', flat=True))
+        self.assertEqual(len(refs), len(set(refs)))
+        self.assertTrue(all(r.startswith('WD-') for r in refs))
+        self.assertEqual(len(existing), len(existing))
+        invs = list(Investment.objects.values_list('reference', flat=True))
+        self.assertEqual(len(invs), len(set(invs)))
+
+    def test_every_paid_withdrawal_points_at_exactly_its_own_ledger_row(self):
+        from investors.models import Transaction, WithdrawalRequest
+        DemoSeeder().run()
+        paid = WithdrawalRequest.objects.filter(status='completed')
+        self.assertTrue(paid.exists())
+        for wr in paid:
+            self.assertEqual((wr.transaction.type, wr.transaction.amount, wr.transaction.investment_id),
+                             ('withdrawal', wr.amount, wr.investment_id))
+            self.assertEqual(wr.transaction.note, f'Withdrawal {wr.reference}')
+        self.assertEqual(Transaction.objects.filter(type='withdrawal').count(), paid.count())  # no stray ledger rows
+
+    def test_reference_collisions_are_avoided(self):
+        from investors.models import WithdrawalRequest
+        seeder = DemoSeeder()
+        seeder._used_refs['wr'] = set()
+        picks = iter(['WD-2026-AAAAAA', 'WD-2026-AAAAAA', 'WD-2026-BBBBBB'])
+        with mock.patch.object(demo_data, '_withdrawal_reference', side_effect=lambda: next(picks)):
+            first, second = seeder._reference('wr'), seeder._reference('wr')
+        self.assertEqual((first, second), ('WD-2026-AAAAAA', 'WD-2026-BBBBBB'))   # the duplicate was skipped
+
+
+@override_settings(FIELD_ENCRYPTION_KEY=KEY)
+class TimeGuardTests(TestCase):
+    def test_a_run_that_takes_too_long_stops_cleanly_and_creates_nothing(self):
+        from investors.demo_data import DemoDataError
+        with override_settings(DEMO_SEED_MAX_SECONDS=-1):   # already out of time
+            with self.assertRaises(DemoDataError) as ctx:
+                DemoSeeder().run()
+        self.assertIn('--timeout 90', str(ctx.exception))
+        self.assertIn('nothing was created', str(ctx.exception))
+        self.assertFalse(InvestorProfile.objects.exists())                      # rolled back, no half-built accounts
+
+    def test_the_elapsed_time_is_recorded(self):
+        seeder = DemoSeeder()
+        with mock.patch.object(demo_data.DemoSeeder, 'seed_investor', return_value=0):
+            seeder.run()
+        self.assertGreaterEqual(seeder.elapsed, 0)

@@ -324,12 +324,12 @@ class SignInAsDemoTests(Base):
         return self.client.post(reverse(CHANGELIST), {'action': 'sign_in_as_demo_investor', '_selected_action': [profile.pk]})
 
     def test_superuser_steps_into_a_demo_portal_and_back_out(self):
-        elena = InvestorProfile.objects.get(user__username='demo-elena')
-        r = self.open_as(elena)
+        colin = InvestorProfile.objects.get(user__username='colin-firth')
+        r = self.open_as(colin)
         self.assertRedirects(r, reverse('investors:home'), fetch_redirect_response=False)
         self.assertEqual(self.client.session['impersonator_id'], self.admin.pk)
         page = self.client.get(reverse('investors:home'))
-        self.assertContains(page, 'Founders Circle Note')
+        self.assertContains(page, 'Firth Family Growth Plan')
         self.assertContains(page, 'Return to admin')
         self.assertEqual(self.client.get('/admin/').status_code, 302)  # now just a demo investor: not staff
 
@@ -352,7 +352,7 @@ class SignInAsDemoTests(Base):
         self.assertEqual(int(self.client.session['_auth_user_id']), self.admin.pk)  # still the admin
 
     def test_exactly_one_investor_must_be_selected(self):
-        ids = [self.demo_profile.pk, InvestorProfile.objects.get(user__username='demo-elena').pk]
+        ids = [self.demo_profile.pk, InvestorProfile.objects.get(user__username='colin-firth').pk]
         r = self.client.post(reverse(CHANGELIST), {'action': 'sign_in_as_demo_investor', '_selected_action': ids}, follow=True)
         self.assertContains(r, 'Select exactly one')
         self.assertEqual(int(self.client.session['_auth_user_id']), self.admin.pk)

@@ -16,7 +16,9 @@ from django.core.files.storage import FileSystemStorage
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from investors.demo_data import DEMO_USERNAMES, PASSWORD, DemoSeeder
+from investors.demo_data import DEMO_USERNAMES, PASSWORD, SEEDED, DemoSeeder
+
+SEEDED_NAMES = [spec['username'] for spec in SEEDED]
 from investors.models import (Document, Investment, InvestorProfile, PayoutAccount, Transaction, WithdrawalRequest)
 
 PW = 'correct-horse-battery-9'
@@ -102,10 +104,11 @@ class CreateTests(ButtonBase):
     def test_creates_flagged_demo_accounts_with_one_time_random_passwords(self):
         r = self.create()
         self.assertContains(r, 'Demo data ready')
+        self.assertRegex(r.content.decode(), r'created in [0-9.]+s')
         self.assertIn('no-store', r['Cache-Control'])
-        self.assertEqual(set(InvestorProfile.objects.filter(is_demo=True).values_list('user__username', flat=True)), set(DEMO_USERNAMES))
+        self.assertEqual(set(InvestorProfile.objects.filter(is_demo=True).values_list('user__username', flat=True)), set(SEEDED_NAMES))
         shown = dict(re.findall(r'<td><code>([\w-]+)</code></td><td>[^<]+</td><td><code>([^<]+)</code></td>', r.content.decode()))
-        self.assertEqual(set(shown), set(DEMO_USERNAMES))
+        self.assertEqual(set(shown), set(SEEDED_NAMES))
         self.assertEqual(len(set(shown.values())), len(shown))          # all different
         self.assertNotIn(PASSWORD, shown.values())                       # never the well-known local password
         self.assertNotIn(PASSWORD, r.content.decode())
@@ -115,20 +118,27 @@ class CreateTests(ButtonBase):
 
     def test_demo_accounts_are_never_staff_and_chidi_must_change_password(self):
         self.create()
-        for user in User.objects.filter(username__in=DEMO_USERNAMES):
+        for user in User.objects.filter(username__in=SEEDED_NAMES):
             self.assertFalse(user.is_staff or user.is_superuser)
             self.assertTrue(user.email.endswith('@example.com'))
         self.assertTrue(InvestorProfile.objects.get(user__username='demo-chidi').must_change_password)
+
+    def test_a_slow_database_gives_a_clear_message_instead_of_a_crash(self):
+        with override_settings(DEMO_SEED_MAX_SECONDS=-1):
+            r = self.create()
+        self.assertContains(r, '--timeout 90')
+        self.assertContains(r, 'nothing was created')
+        self.assertEqual(InvestorProfile.objects.count(), 0)
 
     def test_form_defaults_to_six_years(self):
         self.assertContains(self.client.get(self.url), 'name="years" value="6"')
 
     def test_full_dataset_present_and_action_is_logged(self):
         self.create(years='2')
-        self.assertEqual(InvestorProfile.objects.filter(is_demo=True).count(), len(DEMO_USERNAMES))
+        self.assertEqual(InvestorProfile.objects.filter(is_demo=True).count(), len(SEEDED_NAMES))
         self.assertGreaterEqual(WithdrawalRequest.objects.count(), 7)  # recent ones plus years of old history
-        self.assertGreater(Document.objects.count(), 10)
-        self.assertEqual(PayoutAccount.objects.count(), 4)  # demo x2, elena, colin
+        self.assertEqual(Document.objects.count(), 0)                 # no PDFs
+        self.assertEqual(PayoutAccount.objects.count(), 3)            # demo x2, colin
         entry = LogEntry.objects.get(object_repr='Demo data')
         self.assertEqual(entry.user, self.root)
         self.assertIn('Created demo data', entry.change_message)
@@ -149,7 +159,7 @@ class CreateTests(ButtonBase):
 
 class CollisionSafetyTests(ButtonBase):
     def test_real_account_using_a_demo_username_is_never_touched_and_nothing_is_created(self):
-        user, profile, inv, doc = self.real_client(username='demo-other', email='real@client.com')
+        user, profile, inv, doc = self.real_client(username='demo-chidi', email='real@client.com')
         r = self.create()
         self.assertContains(r, 'already belongs to a real account')
         self.assertFalse(InvestorProfile.objects.filter(is_demo=True).exists())  # all-or-nothing: no partial set left behind
@@ -182,13 +192,15 @@ class RemoveTests(ButtonBase):
     def test_requires_the_exact_phrase(self):
         for phrase in ('', 'remove demo data', 'REMOVE'):
             self.assertContains(self.remove(phrase=phrase), 'exactly to confirm')
-        self.assertEqual(InvestorProfile.objects.filter(is_demo=True).count(), len(DEMO_USERNAMES))
+        self.assertEqual(InvestorProfile.objects.filter(is_demo=True).count(), len(SEEDED_NAMES))
 
     def test_removes_all_demo_data_files_and_accounts(self):
+        with mock.patch('investors.demo_data.INCLUDE_DOCUMENTS', True):
+            DemoSeeder().run(reset=True)   # this test is about stored PDFs being cleaned up as well
         files = [d.file.name for d in Document.objects.all()]
         self.assertTrue(files and all(os.path.exists(os.path.join(self.tmp, f)) for f in files))
         r = self.remove()
-        self.assertContains(r, f'Removed {len(DEMO_USERNAMES)} demo investors')
+        self.assertContains(r, f'Removed {len(SEEDED_NAMES)} demo investors')
         for model in (InvestorProfile, Investment, Transaction, Document, PayoutAccount, WithdrawalRequest):
             self.assertEqual(model.objects.count(), 0, model.__name__)
         self.assertFalse(User.objects.filter(username__in=DEMO_USERNAMES).exists())
@@ -218,7 +230,13 @@ class RemoveTests(ButtonBase):
     def test_removal_is_total_so_the_names_are_free_to_reuse(self):
         self.remove()
         self.create()
-        self.assertEqual(InvestorProfile.objects.filter(is_demo=True).count(), len(DEMO_USERNAMES))
+        self.assertEqual(InvestorProfile.objects.filter(is_demo=True).count(), len(SEEDED_NAMES))
+
+    def test_accounts_created_by_earlier_versions_are_still_removable(self):
+        old_user = User.objects.create_user('demo-elena', 'elena.marsh@example.com', 'x-password-123')
+        old = InvestorProfile.objects.create(user=old_user, display_name='Elena Marsh', is_demo=True)
+        self.remove()
+        self.assertFalse(InvestorProfile.objects.filter(pk=old.pk).exists())
 
 
 @override_settings(CF_ORIGIN_SECRET=SECRET, FIELD_ENCRYPTION_KEY=KEY)

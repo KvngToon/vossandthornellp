@@ -10,7 +10,7 @@
   {% if removed is not None %}<p class="messagelist"><strong>Removed {{ removed }} demo investor{{ removed|pluralize }} and all of their data.</strong></p>{% endif %}
 
   {% if created %}
-    <h2>Demo data ready ({{ made }} new investment{{ made|pluralize }} created)</h2>
+    <h2>Demo data ready ({{ made }} new investment{{ made|pluralize }} created in {{ elapsed }}s)</h2>
     <p><strong>Write these down now: the passwords are shown only once</strong> and were set fresh just now. Sign in at <code>/investors/login/</code>.</p>
     <table>
       <thead><tr><th>Username</th><th>Name</th><th>Password</th><th>What it shows</th></tr></thead>
@@ -22,7 +22,7 @@
   {% endif %}
 
   <h2>Create demo data</h2>
-  <p>Adds six fictional investors (including Colin Firth, with over $1M and a record since January 2020) with plans, valuations, statements, accounts on file and years of withdrawal requests, paid and declined.
+  <p>Adds three fictional investors (Colin Firth with over $1M and a record since January 2020, Demo Investor, and Chidi Okafor on a temporary password) with plans, valuations, accounts on file and years of withdrawal requests, paid and declined. No PDF documents are created.
      If demo accounts already exist, anything missing is added and <strong>their passwords are reset</strong>.
      A real account that uses a demo username is never touched; the tool stops instead.</p>
   <form method="post">{% csrf_token %}
