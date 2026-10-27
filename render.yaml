@@ -3,7 +3,7 @@ services:
     name: vossandthornellp
     runtime: python
     buildCommand: ./build.sh
-    startCommand: gunicorn vossandthornellp.wsgi:application --bind 0.0.0.0:$PORT --workers 2
+    startCommand: gunicorn vossandthornellp.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 90
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.10

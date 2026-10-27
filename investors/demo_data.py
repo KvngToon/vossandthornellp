@@ -10,6 +10,7 @@ run in production). Safety rules, enforced here so every caller gets them:
   bulk_create so no signal can send anything.
 """
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
@@ -176,6 +177,24 @@ def aware(d):
 
 
 
+FILE_WORKERS = 8  # parallel uploads/deletes; each is a network round trip when documents live in Supabase Storage
+
+
+def _in_parallel(fn, items, swallow=None):
+    """Run fn(item) for every item on a small thread pool. Touches no database connection, only
+    file storage, so it is safe on any backend. With `swallow` set, per-item failures are logged
+    instead of raised (used for cleanup, where one bad file must not block the rest)."""
+    def guarded(item):
+        try:
+            return fn(item)
+        except Exception:
+            if swallow is None:
+                raise
+            logger.exception(swallow)
+    with ThreadPoolExecutor(max_workers=FILE_WORKERS) as pool:
+        return list(pool.map(guarded, items))
+
+
 class DemoDataError(Exception):
     """Raised when demo data cannot be created safely (for example a real account uses a demo name)."""
 
@@ -204,12 +223,17 @@ class DemoSeeder:
         WithdrawalRequest.objects.filter(investor__in=profiles).delete()
         PayoutAccount.objects.filter(investor__in=profiles).delete()
         NotificationLog.objects.filter(investor__in=profiles).delete()
-        for doc in Document.objects.filter(investor__in=profiles):
-            try:
-                doc.file.delete(save=False)
-            except Exception:  # a storage hiccup must not stop the cleanup of database rows
-                logger.exception('Could not delete stored demo file %s', doc.file.name)
-            doc.delete()
+        docs = list(Document.objects.filter(investor__in=profiles))
+        _in_parallel(lambda d: d.file.storage.delete(d.file.name) if d.file else None, docs,
+                     swallow='Could not delete a stored demo file')
+        # The files are already gone, so don't let the per-document delete signal queue them all again.
+        from django.db.models.signals import post_delete
+        from .signals import document_removed
+        post_delete.disconnect(document_removed, sender=Document)
+        try:
+            Document.objects.filter(pk__in=[d.pk for d in docs]).delete()
+        finally:
+            post_delete.connect(document_removed, sender=Document)
         Investment.objects.filter(investor__in=profiles).delete()
 
     def remove(self):
@@ -287,7 +311,9 @@ class DemoSeeder:
             if inv.wants_snapshots:
                 self.make_snapshots(inv)
         if spec.get('documents', True):
-            self.make_documents(profile, investments)
+            fresh = list(Investment.objects.filter(pk__in=[i.pk for i in investments])
+                         .prefetch_related('snapshots', 'transactions').order_by('pk'))
+            self.make_documents(profile, fresh)
             self.make_notifications(profile)
         return len(investments)
 
@@ -332,7 +358,9 @@ class DemoSeeder:
     def make_snapshots(self, inv):
         """Monthly valuations, the way staff would post them: the total value of the position that day,
         AFTER any withdrawals already paid (see the conventions at the top of services.py)."""
-        inv = Investment.objects.get(pk=inv.pk)  # fresh copy so every ledger row is visible
+        # One fresh copy with its ledger loaded once; every value below is then computed in memory
+        # (re-reading per value was ~1,400 queries, far too slow over a network database).
+        inv = Investment.objects.prefetch_related('snapshots', 'transactions').get(pk=inv.pk)
         months = months_between(inv.start_date, self.today)
         dates = [d for d in (add_months(inv.start_date, m) for m in range(1, months + 1))
                  if d <= min(self.today, inv.maturity_date)]
@@ -481,13 +509,12 @@ class DemoSeeder:
     # ── statements and agreements ────────────────────────────────────────────────────────────────
     def make_documents(self, profile, investments):
         earliest = min(i.start_date for i in investments)
-        docs = []
+        pending = []  # (Document, pdf bytes): uploaded in parallel below
 
         def add(title, kind, inv, when, pdf_title, lines):
             pdf = make_pdf(pdf_title, ['DEMONSTRATION DOCUMENT - fictional data, not a real statement.', ''] + lines)
             doc = Document(investor=profile, investment=inv, title=title, kind=kind, uploaded_at=min(aware(when), timezone.now()))
-            doc.file.save(f'{kind}.pdf', ContentFile(pdf), save=False)
-            docs.append(doc)
+            pending.append((doc, pdf))
 
         for inv in investments:
             add(f'Investment Agreement - {inv.plan_name}', 'agreement', inv, inv.start_date,
@@ -516,7 +543,8 @@ class DemoSeeder:
             q = (qe.month - 1) // 3 + 1
             add(f'Q{q} {qe.year} Statement', 'statement', None, qe + timedelta(days=5),
                 f'Voss & Thorne LLP - Quarterly Statement Q{q} {qe.year}', lines)
-        Document.objects.bulk_create(docs)  # bulk_create skips signals, so no investor emails
+        _in_parallel(lambda item: item[0].file.save(f'{item[0].kind}.pdf', ContentFile(item[1]), save=False), pending)
+        Document.objects.bulk_create([doc for doc, _ in pending])  # bulk_create skips signals, so no investor emails
 
     def make_notifications(self, profile):
         NotificationLog.objects.bulk_create([
