@@ -15,3 +15,20 @@ services:
         generateValue: true
       - key: ALLOWED_HOSTS
         value: .onrender.com,vossandthornellp.org
+      # Investor documents: private Supabase Storage bucket (S3-compatible API).
+      # Set the values in the Render dashboard; they are secrets, never commit them.
+      - key: SUPABASE_S3_BUCKET
+        sync: false
+      - key: SUPABASE_S3_ENDPOINT
+        sync: false
+      - key: SUPABASE_S3_REGION
+        sync: false
+      - key: SUPABASE_S3_ACCESS_KEY_ID
+        sync: false
+      - key: SUPABASE_S3_SECRET_ACCESS_KEY
+        sync: false
+      # Withdrawals: see investors/geo.py and investors/crypto.py. Both are secrets.
+      - key: CF_ORIGIN_SECRET
+        sync: false
+      - key: FIELD_ENCRYPTION_KEY
+        sync: false

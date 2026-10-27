@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div id="content-main">
+  <p>This shows how the website sees <strong>your</strong> connection right now. Use it to confirm Cloudflare is set up correctly.</p>
+  <table>
+    <tr><th>Detected country</th><td>{{ country|default:"unknown" }}</td></tr>
+    <tr><th>Would a withdrawal be allowed from here?</th><td>{% if allowed %}<strong>Yes</strong>{% else %}<strong>No</strong>{% endif %}</td></tr>
+    <tr><th>Country header from Cloudflare (<code>CF-IPCountry</code>)</th><td>{{ raw_country|default:"not received" }}</td></tr>
+    <tr><th>Origin secret configured on the server (<code>CF_ORIGIN_SECRET</code>)</th><td>{% if secret_configured %}Yes{% else %}<strong>No</strong>: every withdrawal is refused until it is set{% endif %}</td></tr>
+    <tr><th>Origin secret header received from Cloudflare (<code>X-Origin-Verify</code>)</th><td>{% if secret_sent %}Yes{% else %}<strong>No</strong>: the Cloudflare Transform Rule is missing, or you reached the site without going through Cloudflare{% endif %}</td></tr>
+  </table>
+  {% if debug_override %}<p class="errornote">DEBUG is on, so the country is being taken from <code>DEV_COUNTRY</code>, not Cloudflare.</p>{% endif %}
+  <p><a href="{% url 'admin:investors_withdrawalrequest_changelist' %}">&larr; Back to withdrawal requests</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+{% load admin_urls %}
+{% block content %}
+<div id="content-main">
+  {% if not revealed %}
+    <p class="errornote">You are about to view full bank details for <strong>{{ original }}</strong>.</p>
+    <p>This is recorded in the admin history against your account. Only do this when you are about to
+       make the payment, and never copy the numbers into email or chat.</p>
+    <form method="post">{% csrf_token %}
+      <input type="submit" class="default" value="Show bank details (this is logged)">
+      <a href="javascript:history.back()">Cancel</a>
+    </form>
+  {% else %}
+    {% if error %}<p class="errornote">{{ error }}</p>
+    {% elif details %}
+      <p><em>Shown once and logged. Close this page when finished.</em></p>
+      <table>
+        <tr><th>Account holder</th><td>{{ details.0 }}</td></tr>
+        <tr><th>Bank</th><td>{{ details.1 }}</td></tr>
+        <tr><th>Routing number</th><td><code>{{ details.3 }}</code></td></tr>
+        <tr><th>Account number</th><td><code>{{ details.2 }}</code></td></tr>
+      </table>
+    {% else %}
+      <p>There are no bank details to show: this request is to be arranged directly with the investor.</p>
+    {% endif %}
+  {% endif %}
+  <p><a href="{% url opts|admin_urlname:'changelist' %}">&larr; Back to list</a></p>
+</div>
+{% endblock %}

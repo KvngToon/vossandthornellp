@@ -1,0 +1,185 @@
+"""Colin Firth is the flagship demo account: always created with the demo data, over $1M, a record since 2020."""
+import os
+import shutil
+import tempfile
+from datetime import date
+from decimal import Decimal
+from io import StringIO
+from unittest import mock
+
+from cryptography.fernet import Fernet
+from django.contrib.auth.models import User
+from django.core.management import call_command
+from django.core.files.storage import FileSystemStorage
+from django.test import TestCase, override_settings
+from django.urls import reverse
+
+from investors import services
+from investors.demo_data import DemoDataError, DemoSeeder
+from investors.models import Document, Investment, InvestorProfile, WithdrawalRequest
+
+PW = 'correct-horse-battery-9'
+KEY = Fernet.generate_key().decode()
+URL = reverse('admin:investors_investorprofile_demo_data')
+CREATE = 'CREATE DEMO DATA'
+
+
+@override_settings(FIELD_ENCRYPTION_KEY=KEY, DEBUG=True)
+class Base(TestCase):
+    def setUp(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        field = Document._meta.get_field('file')
+        keep, field.storage = field.storage, FileSystemStorage(location=tmp)
+        self.addCleanup(setattr, field, 'storage', keep)
+
+    def colin(self):
+        return InvestorProfile.objects.get(user__username='colin-firth')
+
+    def hand_made_colin(self, email='colin.firth@thefirth.com', demo=True, staff=False):
+        """The kind of account a superuser creates by hand and then flags as demo."""
+        user = User.objects.create_user('colin-firth', email, 'his-own-password-1', is_staff=staff)
+        profile = InvestorProfile.objects.create(user=user, display_name='Colin Firth (custom)', phone='0123', is_demo=demo)
+        Investment.objects.create(investor=profile, plan_name='Hand-made plan', principal=Decimal('1234'), annual_rate=Decimal('5'),
+                                  start_date=date(2025, 1, 1), maturity_date=date(2028, 1, 1))
+        return user, profile
+
+
+class ColinFirthContentTests(Base):
+    def setUp(self):
+        super().setUp()
+        DemoSeeder().run()
+
+    def test_created_with_the_demo_data(self):
+        self.assertTrue(self.colin().is_demo)
+        self.assertEqual(self.colin().display_name, 'Colin Firth')
+        self.assertTrue(self.colin().user.email.endswith('@example.com'))
+
+    def test_balance_is_over_a_million(self):
+        totals = {t['currency']: t for t in services.portfolio_summary(self.colin())['by_currency']}
+        self.assertGreater(totals['USD']['value'], Decimal('1000000'))
+        self.assertGreater(totals['USD']['gain'], 0)
+
+    def test_record_runs_from_january_2020(self):
+        oldest = min(self.colin().investments.values_list('start_date', flat=True))
+        self.assertEqual(oldest, date(2020, 1, 15))
+        rows = services.yearly_returns(self.colin(), currency='USD')
+        self.assertEqual(rows[0]['year'], 2020)
+        self.assertGreaterEqual(len(rows), 7)
+
+    def test_the_history_is_good_every_year_gains_and_none_are_losses(self):
+        for row in services.yearly_returns(self.colin(), currency='USD'):
+            self.assertGreater(row['gain'], 0, row['year'])
+
+    def test_old_paid_and_declined_withdrawals_and_open_requests(self):
+        w = self.colin().withdrawals
+        self.assertGreaterEqual(w.filter(status='completed').count(), 4)
+        self.assertGreaterEqual(w.filter(status='declined').count(), 3)
+        self.assertTrue(w.filter(status='submitted').exists() and w.filter(status='approved').exists())
+        first = w.filter(status='completed').order_by('decided_at').first()
+        self.assertEqual(first.decided_at.year, 2020)         # a paid withdrawal as early as 2020
+
+    def test_account_on_file_statements_and_holder_name(self):
+        self.assertTrue(self.colin().payout_accounts.filter(is_verified=True).exists())
+        self.assertEqual(self.colin().payout_accounts.first().holder_name, 'Colin Firth')
+        titles = list(self.colin().documents.values_list('title', flat=True))
+        self.assertTrue(any('Annual Statement' in t for t in titles) and any(t.startswith('Q') for t in titles))
+        self.assertTrue(any(t.startswith('2020 Annual Statement') for t in titles))
+
+    def test_portal_pages_open_and_show_the_flagship_numbers(self):
+        user = self.colin().user
+        user.set_password('a-known-pass-123')
+        user.save()
+        self.client.post(reverse('investors:login'), {'username': 'colin-firth', 'password': 'a-known-pass-123'})
+        page = self.client.get(reverse('investors:home')).content.decode()
+        self.assertIn('Firth Family Growth Plan', page)
+        self.assertIn('Demonstration account', page)
+        self.assertEqual(self.client.get(reverse('investors:performance')).status_code, 200)
+
+
+class AlwaysCreatedTests(Base):
+    def test_created_by_the_command_every_time(self):
+        call_command('seed_investor_demo', stdout=StringIO())
+        self.assertTrue(InvestorProfile.objects.filter(user__username='colin-firth').exists())
+
+    def test_created_again_after_removal_by_the_button(self):
+        root = User.objects.create_superuser('root', 'r@corp.com', PW)
+        self.client.force_login(root)
+        for _ in range(2):
+            self.client.post(URL, {'action': 'create', 'confirm': CREATE, 'years': '6'})
+            self.assertTrue(InvestorProfile.objects.filter(user__username='colin-firth').exists())
+            self.client.post(URL, {'action': 'remove', 'confirm': 'REMOVE DEMO DATA'})
+            self.assertFalse(InvestorProfile.objects.filter(user__username='colin-firth').exists())
+
+    def test_button_shows_his_password_once_among_the_credentials(self):
+        root = User.objects.create_superuser('root', 'r@corp.com', PW)
+        self.client.force_login(root)
+        page = self.client.post(URL, {'action': 'create', 'confirm': CREATE, 'years': '6'}).content.decode()
+        self.assertIn('<code>colin-firth</code>', page)
+        self.assertIn('Colin Firth', page)
+
+    def test_no_emails_are_sent_for_him(self):
+        with mock.patch('investors.emails._send') as send, self.captureOnCommitCallbacks(execute=True):
+            DemoSeeder().run()
+        send.assert_not_called()
+
+
+class AdoptingAnExistingColinTests(Base):
+    def test_a_hand_made_demo_colin_is_adopted_not_overwritten(self):
+        user, profile = self.hand_made_colin()
+        old_hash = user.password
+        seeder = DemoSeeder(random_passwords=True)
+        seeder.run()
+        user.refresh_from_db()
+        profile.refresh_from_db()
+        self.assertEqual(user.email, 'colin.firth@thefirth.com')              # his own email is kept
+        self.assertEqual((profile.display_name, profile.phone), ('Colin Firth (custom)', '0123'))
+        self.assertEqual(list(profile.investments.values_list('plan_name', flat=True)), ['Hand-made plan'])  # data untouched
+        self.assertNotEqual(user.password, old_hash)                           # a fresh, displayed password
+        shown = dict((u, p) for u, _, p, _ in seeder.credentials)
+        self.assertTrue(user.check_password(shown['colin-firth']))
+        self.assertEqual(InvestorProfile.objects.filter(is_demo=True).count(), len(DemoSeeder.demo_profiles(any_email=True)))
+
+    def test_default_reset_leaves_his_data_alone_but_rebuild_replaces_it(self):
+        user, profile = self.hand_made_colin()
+        DemoSeeder().run(reset=True)                                           # normal reset: example.com accounts only
+        self.assertEqual(profile.investments.count(), 1)
+        DemoSeeder().run(rebuild_custom=True)                                  # explicit rebuild
+        names = set(profile.investments.values_list('plan_name', flat=True))
+        self.assertIn('Firth Family Growth Plan', names)
+        self.assertNotIn('Hand-made plan', names)
+        user.refresh_from_db()
+        self.assertEqual(user.email, 'colin.firth@thefirth.com')               # identity still his
+        totals = {t['currency']: t for t in services.portfolio_summary(profile)['by_currency']}
+        self.assertGreater(totals['USD']['value'], Decimal('1000000'))
+
+    def test_button_rebuild_checkbox_is_explicit(self):
+        root = User.objects.create_superuser('root', 'r@corp.com', PW)
+        self.client.force_login(root)
+        user, profile = self.hand_made_colin()
+        self.client.post(URL, {'action': 'create', 'confirm': CREATE, 'years': '6'})
+        self.assertEqual(profile.investments.count(), 1)                       # not rebuilt without the box
+        self.client.post(URL, {'action': 'create', 'confirm': CREATE, 'years': '6', 'rebuild': 'on'})
+        self.assertGreater(profile.investments.count(), 1)
+
+    def test_an_unflagged_colin_is_a_real_client_and_stops_everything(self):
+        user, profile = self.hand_made_colin(demo=False)
+        with self.assertRaises(DemoDataError):
+            DemoSeeder().run()
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('his-own-password-1'))
+        self.assertFalse(InvestorProfile.objects.filter(user__username='demo').exists())  # all-or-nothing
+
+    def test_a_staff_account_called_colin_is_never_touched(self):
+        user, profile = self.hand_made_colin(staff=True)
+        with self.assertRaises(DemoDataError):
+            DemoSeeder().run()
+        user.refresh_from_db()
+        self.assertTrue(user.is_staff and user.check_password('his-own-password-1'))
+
+    def test_the_remove_button_leaves_an_adopted_custom_email_account_alone(self):
+        user, profile = self.hand_made_colin()
+        DemoSeeder().run()
+        DemoSeeder().remove()
+        self.assertTrue(InvestorProfile.objects.filter(pk=profile.pk).exists())   # example.com safeguard still applies
+        self.assertFalse(InvestorProfile.objects.filter(user__username='demo').exists())

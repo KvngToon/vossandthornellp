@@ -22,3 +22,9 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Private investor documents (local fallback when Supabase is not configured)
+private_media/
+
+# Python 3.11 environment matching production
+.venv/

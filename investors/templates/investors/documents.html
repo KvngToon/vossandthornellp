@@ -1,0 +1,24 @@
+{% extends "investors/base.html" %}
+{% block title %}Documents{% endblock %}
+{% block content %}
+<h1>Documents</h1>
+<p class="lead">Statements and agreements shared with you.</p>
+<div class="pt-card tablewrap" style="padding:8px 12px">
+  {% if documents %}
+  <table class="t">
+    <thead><tr><th>Document</th><th>Type</th><th>Investment</th><th>Added</th><th></th></tr></thead>
+    <tbody>
+    {% for d in documents %}
+      <tr>
+        <td>{{ d.title }}</td>
+        <td>{{ d.get_kind_display }}</td>
+        <td>{% if d.investment %}<a href="{% url 'investors:investment' d.investment.reference %}">{{ d.investment.plan_name }}</a>{% else %}<span class="help">General</span>{% endif %}</td>
+        <td>{{ d.uploaded_at|date:"j M Y" }}</td>
+        <td class="num"><a href="{% url 'investors:document_download' d.pk %}">Download</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="note" style="margin:12px">No documents yet. New statements will appear here.</p>{% endif %}
+</div>
+{% endblock %}

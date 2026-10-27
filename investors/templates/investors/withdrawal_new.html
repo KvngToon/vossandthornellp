@@ -1,0 +1,52 @@
+{% extends "investors/base.html" %}
+{% block title %}New withdrawal request{% endblock %}
+{% block content %}
+{% if not allowed %}
+  <div class="pt-card pt-narrow blocked" style="margin-top:4vh">
+    <h1>Withdrawal unavailable</h1>
+    <p class="lead" style="color:var(--text)">{{ blocked_message }}</p>
+    <a class="btn" href="{% url 'investors:withdrawals' %}">Back to withdrawals</a>
+  </div>
+{% else %}
+<p class="help" style="margin:0 0 8px"><a href="{% url 'investors:withdrawals' %}">← Withdrawals</a></p>
+<h1>New withdrawal request</h1>
+<p class="lead">We review every request and call you on the number we hold before paying. Funds are never moved automatically.</p>
+<div class="pt-card" style="max-width:620px">
+  <form method="post" novalidate autocomplete="off">{% csrf_token %}
+    {{ form.non_field_errors }}
+    <label for="{{ form.investment.id_for_label }}">Investment</label>{{ form.investment }}{{ form.investment.errors }}
+    <label for="{{ form.amount.id_for_label }}">Amount</label>{{ form.amount }}{{ form.amount.errors }}
+
+    <label>Where should we pay it?</label>
+    {{ form.destination }}{{ form.destination.errors }}
+
+    {% if has_saved %}<div data-dest="saved">
+      <label for="{{ form.saved_account.id_for_label }}">Account on file</label>{{ form.saved_account }}{{ form.saved_account.errors }}
+    </div>{% endif %}
+    <div data-dest="typed">
+      <label for="{{ form.holder_name.id_for_label }}">Account holder name</label>{{ form.holder_name }}{{ form.holder_name.errors }}
+      <label for="{{ form.bank_name.id_for_label }}">Bank name</label>{{ form.bank_name }}{{ form.bank_name.errors }}
+      <label for="{{ form.routing_number.id_for_label }}">Routing number (ABA)</label>{{ form.routing_number }}{{ form.routing_number.errors }}
+      <label for="{{ form.account_number.id_for_label }}">Account number</label>{{ form.account_number }}{{ form.account_number.errors }}
+      <p class="help">Stored encrypted. We will confirm these details with you by phone before paying.</p>
+    </div>
+    <div data-dest="offline"><p class="help">Our team will arrange the destination with you when they call.</p></div>
+
+    <label for="{{ form.password.id_for_label }}">Confirm with your password</label>{{ form.password }}{{ form.password.errors }}
+    <p style="margin-top:18px"><label style="display:flex;gap:10px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:14px;color:var(--text)">{{ form.confirm }} <span>{{ form.confirm.label }}</span></label>{{ form.confirm.errors }}</p>
+    <button class="btn" type="submit">Submit request</button>
+  </form>
+</div>
+<script>
+(function () {
+  var radios = document.querySelectorAll('input[name=destination]');
+  function show() {
+    var v = (document.querySelector('input[name=destination]:checked') || {}).value;
+    document.querySelectorAll('[data-dest]').forEach(function (el) { el.hidden = el.getAttribute('data-dest') !== v; });
+  }
+  radios.forEach(function (r) { r.addEventListener('change', show); });
+  show();
+})();
+</script>
+{% endif %}
+{% endblock %}

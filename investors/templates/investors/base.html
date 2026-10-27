@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>{% block title %}Investor Portal{% endblock %} · Voss &amp; Thorne</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #07070d; --surface: #0e0e18; --border: #1f1f35;
+      --accent: #c9a84c; --accent-hi: #e2c06a;
+      --text: #dde0ee; --muted: #8a8aa5; --danger: #e84545; --success: #3ecf8e;
+      --ff-display: 'Barlow Condensed', sans-serif;
+      --ff-mono: 'IBM Plex Mono', monospace;
+      --ff-body: 'Instrument Serif', serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--ff-body); font-size: 18px; min-height: 100vh; }
+    a { color: var(--accent); }
+    .pt-bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid var(--border); }
+    .pt-brand { font-family: var(--ff-display); font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); text-decoration: none; }
+    .pt-brand small { display: block; font-family: var(--ff-mono); font-size: 10px; letter-spacing: .2em; color: var(--muted); font-weight: 400; }
+    .pt-main { max-width: 1100px; margin: 0 auto; padding: 32px 24px 64px; }
+    .pt-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 32px; }
+    .pt-narrow { max-width: 420px; margin: 8vh auto 0; }
+    h1 { font-family: var(--ff-display); font-size: 34px; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 8px; }
+    p.lead { color: var(--muted); margin: 0 0 24px; }
+    label { display: block; font-family: var(--ff-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 18px 0 6px; }
+    input[type=email], input[type=password], input[type=text] {
+      width: 100%; padding: 12px 14px; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 4px; font: 16px var(--ff-mono);
+    }
+    input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .btn { display: inline-block; margin-top: 24px; padding: 13px 28px; background: var(--accent); color: #07070d; border: 0; border-radius: 3px;
+           font: 700 12px var(--ff-mono); letter-spacing: .18em; text-transform: uppercase; cursor: pointer; text-decoration: none; }
+    .btn:hover { background: var(--accent-hi); }
+    .btn-link { background: none; border: 0; color: var(--muted); font: 12px var(--ff-mono); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; padding: 0; }
+    .errorlist { list-style: none; margin: 8px 0 0; padding: 0; color: var(--danger); font-family: var(--ff-mono); font-size: 13px; }
+    .helptext, .help { color: var(--muted); font-family: var(--ff-mono); font-size: 12px; margin-top: 6px; }
+    .helptext ul { padding-left: 18px; }
+    .alert { border: 1px solid var(--danger); color: var(--danger); border-radius: 4px; padding: 10px 14px; font-family: var(--ff-mono); font-size: 13px; margin-bottom: 8px; }
+    .pt-nav { display: flex; align-items: center; gap: 24px; font-family: var(--ff-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+    .pt-nav a { color: var(--muted); text-decoration: none; padding-bottom: 4px; border-bottom: 2px solid transparent; }
+    .pt-nav a:hover { color: var(--text); }
+    .pt-nav a[aria-current=page] { color: var(--accent); border-color: var(--accent); }
+    .pt-nav form { margin: 0; }
+    .grid { display: grid; gap: 16px; }
+    .stats { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin: 20px 0 28px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; }
+    .stat .k { font: 11px var(--ff-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+    .stat .v { font: 800 34px var(--ff-display); letter-spacing: .02em; margin-top: 6px; }
+    .stat .s { font: 12px var(--ff-mono); color: var(--muted); margin-top: 2px; }
+    .up { color: var(--success); } .down { color: var(--danger); } .flat { color: var(--muted); }
+    .chart-box { position: relative; height: 340px; }
+    .chart-box.sm { height: 260px; }
+    h2 { font: 700 14px var(--ff-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin: 36px 0 12px; }
+    .chips { display: flex; gap: 8px; margin-top: 8px; }
+    .chip { font: 12px var(--ff-mono); letter-spacing: .1em; padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); text-decoration: none; }
+    .chip[aria-current=true] { border-color: var(--accent); color: var(--accent); }
+    table.t { width: 100%; border-collapse: collapse; font-family: var(--ff-mono); font-size: 13px; }
+    table.t th { text-align: left; font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    table.t td { padding: 14px 12px; border-bottom: 1px solid var(--border); }
+    table.t .num { text-align: right; white-space: nowrap; }
+    .tablewrap { overflow-x: auto; }
+    .tag { font: 11px var(--ff-mono); letter-spacing: .12em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; border: 1px solid var(--border); color: var(--muted); }
+    .tag.active { color: var(--success); border-color: var(--success); }
+    .bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+    .bar > i { display: block; height: 100%; background: var(--accent); }
+    .terms { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .terms div { font-family: var(--ff-mono); font-size: 13px; }
+    .terms span { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .note { font: 12px var(--ff-mono); color: var(--muted); margin-top: 14px; }
+    @media (max-width: 640px) { .pt-bar { flex-direction: column; gap: 12px; } .pt-main { padding: 20px 16px 48px; } .pt-card { padding: 20px; } }
+    .alert.ok-success { border-color: var(--success); color: var(--success); }
+    select, textarea { width: 100%; padding: 12px 14px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font: 16px var(--ff-mono); }
+    input[type=number] { width: 100%; padding: 12px 14px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font: 16px var(--ff-mono); }
+    .radios { list-style: none; padding: 0; margin: 6px 0 0; } .radios li { margin: 8px 0; }
+    .radios label { display: inline; font-size: 14px; text-transform: none; letter-spacing: 0; color: var(--text); margin: 0 0 0 8px; }
+    .blocked { border-color: var(--danger); } .blocked h1 { color: var(--danger); }
+    .tag.submitted, .tag.under_review, .tag.approved { color: var(--accent); border-color: var(--accent); }
+    .tag.completed { color: var(--success); border-color: var(--success); }
+    .tag.declined, .tag.cancelled { color: var(--danger); border-color: var(--danger); }
+    .demo-banner { background: repeating-linear-gradient(45deg, #2a2208, #2a2208 12px, #231c06 12px, #231c06 24px); color: var(--accent); text-align: center; padding: 8px 16px; font: 12px var(--ff-mono); letter-spacing: .12em; text-transform: uppercase; border-bottom: 1px solid var(--accent-lo, #8a7030); }
+    .foot { margin-top: 24px; font-family: var(--ff-mono); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header class="pt-bar">
+    <a class="pt-brand" href="{% url 'investors:home' %}">Voss &amp; Thorne<small>Investor Portal</small></a>
+    {% if request.user.is_authenticated and request.investor %}
+      <nav class="pt-nav" aria-label="Portal">
+      {% if not investor.must_change_password %}
+        <a href="{% url 'investors:home' %}" {% if nav == 'dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
+        <a href="{% url 'investors:performance' %}" {% if nav == 'performance' %}aria-current="page"{% endif %}>Performance</a>
+        <a href="{% url 'investors:documents' %}" {% if nav == 'documents' %}aria-current="page"{% endif %}>Documents</a>
+        <a href="{% url 'investors:withdrawals' %}" {% if nav == 'withdrawals' %}aria-current="page"{% endif %}>Withdrawals</a>
+        <a href="{% url 'investors:change_password' %}" {% if nav == 'password' %}aria-current="page"{% endif %}>Password</a>
+      {% endif %}
+        <form method="post" action="{% url 'investors:logout' %}">{% csrf_token %}
+          <button class="btn-link" type="submit">Sign out</button>
+        </form>
+      </nav>
+    {% endif %}
+  </header>
+  {% if investor.is_demo %}<div class="demo-banner" role="note">Demonstration account: every name, balance and document here is fictional.
+    {% if request.session.impersonator_id %}<form method="post" action="{% url 'investors:return_to_admin' %}" style="display:inline;margin-left:14px">{% csrf_token %}<button class="btn-link" type="submit" style="color:var(--text);text-decoration:underline">Return to admin</button></form>{% endif %}
+  </div>{% endif %}
+  <main class="pt-main">
+    {% if messages %}{% for m in messages %}<div class="alert ok-{{ m.tags }}" role="status">{{ m }}</div>{% endfor %}{% endif %}
+    {% block content %}{% endblock %}</main>
+</body>
+</html>

@@ -1,0 +1,50 @@
+{% extends "investors/base.html" %}
+{% load investor_extras %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Welcome, {{ investor.display_name }}</h1>
+
+{% if not totals %}
+  <div class="pt-card"><p class="lead" style="margin:0">You have no investments on record yet. If you expected to see some, please contact us.</p></div>
+{% else %}
+  {% if currencies|length > 1 %}
+    <div class="chips" role="group" aria-label="Currency">
+      {% for c in currencies %}<a class="chip" href="?currency={{ c }}" {% if c == currency %}aria-current="true"{% endif %}>{{ c }}</a>{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="grid stats">
+    <div class="stat"><div class="k">Total invested</div><div class="v">{{ totals.invested|money:currency }}</div><div class="s">{{ totals.count }} investment{{ totals.count|pluralize }}</div></div>
+    <div class="stat"><div class="k">Current value</div><div class="v">{{ totals.value|money:currency }}</div>{% if totals.withdrawn %}<div class="s">after {{ totals.withdrawn|money:currency }} withdrawn</div>{% endif %}</div>
+    <div class="stat"><div class="k">Total gain</div><div class="v {{ totals.gain|trend }}">{{ totals.gain|money:currency }}</div></div>
+    <div class="stat"><div class="k">Overall return</div><div class="v {{ totals.return_pct|trend }}">{{ totals.return_pct|signed_pct }}</div><div class="s">{% if totals.withdrawn %}including money withdrawn{% else %}on amount invested{% endif %}</div></div>
+  </div>
+
+  <div class="pt-card">
+    <div class="chart-box" role="img" aria-label="Portfolio value over time, with projection to maturity">
+      <canvas id="growth-canvas"></canvas>
+    </div>
+    <p class="note">Solid line: value to date. Dashed line: projected growth to maturity at the agreed rate.</p>
+  </div>
+
+  <h2>Your investments</h2>
+  <div class="pt-card tablewrap" style="padding:8px 12px">
+    <table class="t">
+      <thead><tr><th>Plan</th><th>Status</th><th class="num">Invested</th><th class="num">Value</th><th class="num">Return</th><th>Matures</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td><a href="{% url 'investors:investment' r.investment.reference %}">{{ r.investment.plan_name }}</a><br><span class="help">{{ r.investment.reference }}</span></td>
+          <td><span class="tag {{ r.investment.status }}">{{ r.investment.get_status_display }}</span></td>
+          <td class="num">{{ r.investment.principal|money:currency }}</td>
+          <td class="num">{{ r.value|money:currency }}</td>
+          <td class="num {{ r.return_pct|trend }}">{{ r.return_pct|signed_pct }}</td>
+          <td>{{ r.investment.maturity_date|date:"j M Y" }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "investors/_chart_line.html" with chart=chart chart_id="growth" currency=currency %}
+{% endif %}
+{% endblock %}

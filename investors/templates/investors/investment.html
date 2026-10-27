@@ -1,0 +1,60 @@
+{% extends "investors/base.html" %}
+{% load investor_extras %}
+{% block title %}{{ inv.plan_name }}{% endblock %}
+{% block content %}
+<p class="help" style="margin:0 0 8px"><a href="{% url 'investors:home' %}">← Dashboard</a></p>
+<h1>{{ inv.plan_name }}</h1>
+<p class="lead">{{ inv.reference }} · <span class="tag {{ inv.status }}">{{ inv.get_status_display }}</span></p>
+
+<div class="grid stats">
+  <div class="stat"><div class="k">Invested</div><div class="v">{{ inv.principal|money:inv.currency }}</div></div>
+  <div class="stat"><div class="k">Current value</div><div class="v">{{ value|money:inv.currency }}</div>{% if withdrawn %}<div class="s">after {{ withdrawn|money:inv.currency }} withdrawn</div>{% endif %}</div>
+  <div class="stat"><div class="k">Gain</div><div class="v {{ gain|trend }}">{{ gain|money:inv.currency }}</div><div class="s">{{ return_pct|signed_pct }}{% if withdrawn %} · includes money withdrawn{% endif %}</div></div>
+  <div class="stat"><div class="k">Term</div><div class="v">{{ progress }}%</div>
+    <div class="s">{% if days_left %}{{ days_left }} day{{ days_left|pluralize }} to maturity{% else %}Matured{% endif %}</div>
+    <div class="bar" role="progressbar" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"><i style="width:{{ progress }}%"></i></div></div>
+</div>
+
+<div class="pt-card">
+  <div class="chart-box" role="img" aria-label="Value of this investment over time, with projection to maturity">
+    <canvas id="growth-canvas"></canvas>
+  </div>
+  <p class="note">Solid line: value to date. Dashed line: projected growth to maturity at the agreed rate.</p>
+</div>
+
+<h2>Terms</h2>
+<div class="pt-card grid terms">
+  <div><span>Annual rate</span>{{ inv.annual_rate|floatformat:"-3" }}%</div>
+  <div><span>Interest</span>{% if inv.payout_mode == 'periodic' %}Simple, paid out periodically{% else %}{{ inv.get_compounding_display }}, paid at maturity{% endif %}</div>
+  <div><span>Start date</span>{{ inv.start_date|date:"j M Y" }}</div>
+  <div><span>Maturity date</span>{{ inv.maturity_date|date:"j M Y" }}</div>
+</div>
+
+<h2>Transactions</h2>
+<div class="pt-card tablewrap" style="padding:8px 12px">
+  {% if transactions %}
+  <table class="t">
+    <thead><tr><th>Date</th><th>Type</th><th>Note</th><th class="num">Amount</th></tr></thead>
+    <tbody>
+    {% for t in transactions %}
+      <tr><td>{{ t.date|date:"j M Y" }}</td><td>{{ t.get_type_display }}</td><td>{{ t.note }}</td><td class="num">{{ t.amount|money:inv.currency }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="note" style="margin:12px">No transactions recorded yet.</p>{% endif %}
+</div>
+{% if documents %}
+<h2>Documents</h2>
+<div class="pt-card tablewrap" style="padding:8px 12px">
+  <table class="t">
+    <tbody>
+    {% for d in documents %}
+      <tr><td>{{ d.title }}</td><td>{{ d.get_kind_display }}</td><td>{{ d.uploaded_at|date:"j M Y" }}</td>
+          <td class="num"><a href="{% url 'investors:document_download' d.pk %}">Download</a></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% include "investors/_chart_line.html" with chart=chart chart_id="growth" currency=inv.currency %}
+{% endblock %}

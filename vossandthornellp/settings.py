@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'tracking',
+    'investors',
 ]
 
 # ── Middleware ─────────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 # ── Password validation ───────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 12}},
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
@@ -84,6 +85,37 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
+# ── Sessions & cookies ────────────────────────────────────────────────────────
+# Investors see financial data, so keep sessions short and cookies HTTPS-only
+# outside local development (run locally with DEBUG=True).
+SESSION_COOKIE_AGE = 60 * 60 * 12
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24 * 3
+
+# Render terminates TLS and forwards the original scheme in this header. Without
+# it Django thinks every request is plain HTTP (breaking secure cookies, CSRF
+# origin checks and absolute URLs).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Opt-in so local/test runs over http keep working. Enable in Render once you
+# have confirmed the domain serves HTTPS end to end (a Cloudflare 'Flexible' SSL
+# mode would cause a redirect loop). Raise HSTS gradually: 3600 first, then a year.
+SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
+SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+
+# ── Withdrawals: country rule and bank-detail encryption ──────────────────────
+# Secret shared with a Cloudflare Transform Rule that adds an `X-Origin-Verify` header; only
+# requests carrying it are trusted to have an honest CF-IPCountry header. Unset = every
+# withdrawal is refused (fails closed).
+CF_ORIGIN_SECRET = os.environ.get('CF_ORIGIN_SECRET', '')
+WITHDRAWAL_ALLOWED_COUNTRIES = ('US',)
+# Local development only (ignored unless DEBUG): pretend to be in this country, e.g. DEV_COUNTRY=GB.
+DEV_COUNTRY = os.environ.get('DEV_COUNTRY', 'US')
+# Fernet key for encrypting bank details at rest. See investors/crypto.py. Keep a backup.
+FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY', '')
+
 # ── Static & media files ──────────────────────────────────────────────────────
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -92,6 +124,16 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Investor documents. With SUPABASE_S3_BUCKET set they live in a private Supabase
+# Storage bucket (S3-compatible API); otherwise in PRIVATE_MEDIA_ROOT locally.
+# Keys come from Supabase dashboard -> Storage -> S3 Connection. Never commit them.
+PRIVATE_MEDIA_ROOT = BASE_DIR / 'private_media'
+SUPABASE_S3_BUCKET = os.environ.get('SUPABASE_S3_BUCKET', '')
+SUPABASE_S3_ENDPOINT = os.environ.get('SUPABASE_S3_ENDPOINT', '')
+SUPABASE_S3_REGION = os.environ.get('SUPABASE_S3_REGION', 'us-east-1')
+SUPABASE_S3_ACCESS_KEY_ID = os.environ.get('SUPABASE_S3_ACCESS_KEY_ID', '')
+SUPABASE_S3_SECRET_ACCESS_KEY = os.environ.get('SUPABASE_S3_SECRET_ACCESS_KEY', '')
 
 # ── Resend email ──────────────────────────────────────────────────────────────
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')

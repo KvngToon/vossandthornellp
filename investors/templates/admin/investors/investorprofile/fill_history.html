@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div id="content-main">
+  <p class="errornote" style="background:#fff3cd;color:#664d03;border-color:#ffe69c">
+    This adds <strong>fictional</strong> history (plans, ledger, valuations, statements, and years of paid and declined withdrawals) to the demo accounts below.
+    Their login, email and name are not changed. Real clients can never be filled; the tool refuses them.</p>
+
+  {% if error %}<p class="errornote">{{ error }}</p>{% endif %}
+
+  <table>
+    <thead><tr><th>Demo account</th><th>Investments</th><th>Withdrawals</th><th>Documents</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td>{{ r.profile.display_name }} <code>({{ r.profile.user.username }})</code></td><td>{{ r.investments }}</td><td>{{ r.withdrawals }}</td><td>{{ r.documents }}</td></tr>{% endfor %}</tbody>
+  </table>
+
+  <form method="post" style="margin-top:1.5em">{% csrf_token %}
+    <input type="hidden" name="action" value="fill_with_demo_history">
+    <input type="hidden" name="apply" value="1">
+    {% for pk in ids %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ pk }}">{% endfor %}
+    <p><label>Portfolio style:
+      <select name="style">{% for key, text in styles.items %}<option value="{{ key }}" {% if key == style %}selected{% endif %}>{{ text }}</option>{% endfor %}</select></label></p>
+    <p><label>How many years back should the oldest plan start? <input type="number" name="years" value="{{ years }}" min="1" max="10" style="width:5em"></label></p>
+    <p><label><input type="checkbox" name="replace"> <strong>Replace existing data.</strong>
+       Accounts that already have investments, withdrawals or documents are skipped unless this is ticked. If ticked, their current investments,
+       withdrawals, documents and accounts on file are deleted first, including anything entered by hand.</label></p>
+    <p><label>Type <code>{{ phrase }}</code> to confirm: <input type="text" name="confirm" autocomplete="off" size="24"></label></p>
+    <input type="submit" class="default" value="Fill with demo history">
+    <a href="{% url 'admin:investors_investorprofile_changelist' %}" style="margin-left:1em">Cancel</a>
+  </form>
+</div>
+{% endblock %}

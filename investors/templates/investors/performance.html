@@ -1,0 +1,62 @@
+{% extends "investors/base.html" %}
+{% load investor_extras %}
+{% block title %}Performance{% endblock %}
+{% block content %}
+<h1>Performance by year</h1>
+<p class="lead">How your portfolio has grown, year by year.</p>
+
+{% if not rows %}
+  <div class="pt-card"><p class="lead" style="margin:0">Nothing to show yet.</p></div>
+{% else %}
+  {% if currencies|length > 1 %}
+    <div class="chips" role="group" aria-label="Currency">
+      {% for c in currencies %}<a class="chip" href="?currency={{ c }}" {% if c == currency %}aria-current="true"{% endif %}>{{ c }}</a>{% endfor %}
+    </div>
+  {% endif %}
+  <div class="pt-card" style="margin-top:16px">
+    <div class="chart-box sm" role="img" aria-label="Gain earned in each year"><canvas id="perf-canvas"></canvas></div>
+  </div>
+
+  <h2>Year by year</h2>
+  <div class="pt-card tablewrap" style="padding:8px 12px">
+    <table class="t">
+      <thead><tr><th>Year</th><th class="num">Opening value</th><th class="num">New money</th>{% if any_withdrawn %}<th class="num">Withdrawn</th>{% endif %}<th class="num">Closing value</th><th class="num">Gain</th><th class="num">Return</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ r.year }}{% if forloop.last %} <span class="help">(to date)</span>{% endif %}</td>
+          <td class="num">{{ r.opening|money:currency }}</td>
+          <td class="num">{{ r.added|money:currency }}</td>
+          {% if any_withdrawn %}<td class="num">{{ r.withdrawn|money:currency }}</td>{% endif %}
+          <td class="num">{{ r.closing|money:currency }}</td>
+          <td class="num {{ r.gain|trend }}">{{ r.gain|money:currency }}</td>
+          <td class="num {{ r.return_pct|trend }}">{{ r.return_pct|signed_pct }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Return is the year's gain (including any money you withdrew) divided by opening value plus any new money added that year. It is an indicator, not a time-weighted figure.</p>
+
+  {{ chart|json_script:"perf" }}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
+          integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD"
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script>
+  (function () {
+    var data = JSON.parse(document.getElementById('perf').textContent);
+    var css = getComputedStyle(document.documentElement);
+    var gold = css.getPropertyValue('--accent').trim(), muted = css.getPropertyValue('--muted').trim(), border = css.getPropertyValue('--border').trim();
+    var cur = '{{ currency|escapejs }}';
+    function fmt(v) { return new Intl.NumberFormat('en-US', {style: 'currency', currency: cur, maximumFractionDigits: 0}).format(v); }
+    new Chart(document.getElementById('perf-canvas'), {
+      type: 'bar',
+      data: {labels: data.labels, datasets: [{label: 'Gain', data: data.gain, backgroundColor: gold, borderRadius: 3}]},
+      options: {responsive: true, maintainAspectRatio: false,
+        plugins: {legend: {display: false}, tooltip: {callbacks: {label: function (c) { return 'Gain: ' + fmt(c.parsed.y); }}}},
+        scales: {x: {grid: {display: false}, ticks: {color: muted}}, y: {grid: {color: border}, ticks: {color: muted, callback: fmt}}}}
+    });
+  })();
+  </script>
+{% endif %}
+{% endblock %}

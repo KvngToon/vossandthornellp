@@ -1,0 +1,34 @@
+{% extends "investors/base.html" %}
+{% load investor_extras %}
+{% block title %}Withdrawals{% endblock %}
+{% block content %}
+<h1>Withdrawals</h1>
+<p class="lead">Request money from your investments. Every request is reviewed by our team, and we call you before anything is paid.</p>
+
+{% if allowed %}
+  <a class="btn" href="{% url 'investors:withdrawal_new' %}" style="margin-top:0">New withdrawal request</a>
+{% else %}
+  <div class="alert" role="alert">{{ blocked_message }}</div>
+{% endif %}
+
+<h2>Your requests</h2>
+<div class="pt-card tablewrap" style="padding:8px 12px">
+  {% if requests %}
+  <table class="t">
+    <thead><tr><th>Reference</th><th>Investment</th><th class="num">Amount</th><th>Paid to</th><th>Status</th><th>Submitted</th></tr></thead>
+    <tbody>
+    {% for r in requests %}
+      <tr>
+        <td><a href="{% url 'investors:withdrawal_detail' r.pk %}">{{ r.reference }}</a></td>
+        <td>{{ r.investment.plan_name }}</td>
+        <td class="num">{{ r.amount|money:r.currency }}</td>
+        <td>{{ r.destination_label }}</td>
+        <td><span class="tag {{ r.status }}">{{ r.get_status_display }}</span></td>
+        <td>{{ r.submitted_at|date:"j M Y" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="note" style="margin:12px">You have not made any withdrawal requests.</p>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "investors/base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<div class="pt-card pt-narrow">
+  <h1>Investor sign in</h1>
+  <p class="lead">Private access for Voss &amp; Thorne investors.</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert" role="alert">{{ form.non_field_errors.0 }}</div>{% endif %}
+    <label for="{{ form.username.id_for_label }}">Username</label>
+    {{ form.username }}
+    {{ form.username.errors }}
+    <label for="{{ form.password.id_for_label }}">Password</label>
+    {{ form.password }}
+    <input type="hidden" name="next" value="{{ next }}" />
+    <button class="btn" type="submit">Sign in</button>
+  </form>
+  <p class="foot"><a href="{% url 'investors:password_reset' %}">Forgot your password?</a></p>
+</div>
+{% endblock %}

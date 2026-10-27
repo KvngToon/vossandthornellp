@@ -1,0 +1,38 @@
+{# Expects: chart (labels/actual/projected), chart_id, currency #}
+{{ chart|json_script:chart_id }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
+        integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+(function () {
+  var data = JSON.parse(document.getElementById('{{ chart_id }}').textContent);
+  var css = getComputedStyle(document.documentElement);
+  var gold = css.getPropertyValue('--accent').trim(), muted = css.getPropertyValue('--muted').trim(),
+      border = css.getPropertyValue('--border').trim(), text = css.getPropertyValue('--text').trim();
+  var cur = '{{ currency|escapejs }}';
+  function fmt(v) { return new Intl.NumberFormat('en-US', {style: 'currency', currency: cur, maximumFractionDigits: 0}).format(v); }
+  function lab(iso) { var d = new Date(iso + 'T00:00:00'); return d.toLocaleDateString('en-US', {month: 'short', year: 'numeric'}); }
+  new Chart(document.getElementById('{{ chart_id }}-canvas'), {
+    type: 'line',
+    data: {
+      labels: data.labels,
+      datasets: [
+        {label: 'Value', data: data.actual, borderColor: gold, backgroundColor: gold + '22', fill: true, tension: .25, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2.5, spanGaps: false},
+        {label: 'Projected', data: data.projected, borderColor: muted, borderDash: [6, 5], fill: false, tension: .25, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2, spanGaps: false}
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
+      plugins: {
+        legend: {labels: {color: muted, usePointStyle: true, boxWidth: 8}},
+        tooltip: {callbacks: {title: function (items) { return lab(data.labels[items[0].dataIndex]); },
+                              label: function (c) { return c.parsed.y == null ? null : c.dataset.label + ': ' + fmt(c.parsed.y); }}}
+      },
+      scales: {
+        x: {grid: {display: false}, ticks: {color: muted, maxTicksLimit: 8, callback: function (v) { return lab(data.labels[v]); }}},
+        y: {grid: {color: border}, ticks: {color: muted, callback: fmt}}
+      }
+    }
+  });
+})();
+</script>

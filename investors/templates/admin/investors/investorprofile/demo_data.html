@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div id="content-main">
+  <p class="errornote" style="background:#fff3cd;color:#664d03;border-color:#ffe69c">
+    Demo data is <strong>fictional</strong> (invented people, <code>example.com</code> emails, test bank numbers). It is stored in the
+    <strong>same database as your real clients</strong>, flagged as demo, never emailed, and shown with a banner. Use it for training and demonstrations only,
+    and never present it to anyone as a real track record.</p>
+
+  {% if error %}<p class="errornote">{{ error }}</p>{% endif %}
+  {% if removed is not None %}<p class="messagelist"><strong>Removed {{ removed }} demo investor{{ removed|pluralize }} and all of their data.</strong></p>{% endif %}
+
+  {% if created %}
+    <h2>Demo data ready ({{ made }} new investment{{ made|pluralize }} created)</h2>
+    <p><strong>Write these down now: the passwords are shown only once</strong> and were set fresh just now. Sign in at <code>/investors/login/</code>.</p>
+    <table>
+      <thead><tr><th>Username</th><th>Name</th><th>Password</th><th>What it shows</th></tr></thead>
+      <tbody>{% for username, name, password, note in credentials %}
+        <tr><td><code>{{ username }}</code></td><td>{{ name }}</td><td><code>{{ password }}</code></td><td>{{ note }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    <hr>
+  {% endif %}
+
+  <h2>Create demo data</h2>
+  <p>Adds six fictional investors (including Colin Firth, with over $1M and a record since January 2020) with plans, valuations, statements, accounts on file and years of withdrawal requests, paid and declined.
+     If demo accounts already exist, anything missing is added and <strong>their passwords are reset</strong>.
+     A real account that uses a demo username is never touched; the tool stops instead.</p>
+  <form method="post">{% csrf_token %}
+    <input type="hidden" name="action" value="create">
+    <p><label>How many years back should the oldest plan start? <input type="number" name="years" value="6" min="1" max="10" style="width:5em"></label></p>
+    <p><label><input type="checkbox" name="rebuild"> <strong>Rebuild existing demo accounts from scratch.</strong>
+       Deletes the current investments, withdrawals, documents and accounts on file of every demo account first, including any you changed by hand
+       and any demo account you gave your own email (such as an existing Colin Firth), then creates the full dataset again.</label></p>
+    <p><label>Type <code>{{ create_phrase }}</code> to confirm: <input type="text" name="confirm" autocomplete="off" size="24"></label></p>
+    <input type="submit" class="default" value="Create demo data">
+  </form>
+
+  <h2>Remove demo data</h2>
+  {% if exists %}
+    <p>Deletes every flagged demo investor, their accounts and all of their data, including stored PDFs. Real clients are never affected.</p>
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="action" value="remove">
+      <p><label>Type <code>{{ remove_phrase }}</code> to confirm: <input type="text" name="confirm" autocomplete="off" size="24"></label></p>
+      <input type="submit" value="Remove demo data" style="background:#ba2121;color:#fff">
+    </form>
+  {% else %}<p>There is no demo data right now.</p>{% endif %}
+
+  <p style="margin-top:2em"><a href="{% url 'admin:investors_investorprofile_changelist' %}">&larr; Back to investor profiles</a></p>
+</div>
+{% endblock %}

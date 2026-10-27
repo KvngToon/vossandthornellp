@@ -1,0 +1,46 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div id="content-main">
+  <p>Import an investor's <strong>real</strong> past transactions and valuations from a CSV file. You will see a preview first and nothing is saved until you confirm.
+     Imported rows never trigger investor emails.</p>
+  <p>Columns: <code>investment</code> (reference), <code>date</code> (YYYY-MM-DD), <code>type</code>
+     (deposit, interest_credit, payout, withdrawal, valuation), <code>amount</code>, <code>note</code> (optional).
+     For <code>valuation</code> rows the amount is the total value on that date, <strong>after any withdrawals already paid out</strong>. Maximum {{ max_rows }} rows.
+     <a href="?sample=1">Download a sample file</a>.</p>
+
+  {% if upload_error %}<p class="errornote">{{ upload_error }}</p>{% endif %}
+
+  {% if result %}
+    {% if result.errors %}
+      <p class="errornote">{{ result.errors|length }} problem{{ result.errors|length|pluralize }} found. Fix the file and upload it again; nothing was saved.</p>
+      <table>
+        <thead><tr><th>Line</th><th>Problem</th></tr></thead>
+        <tbody>{% for line, msg in error_rows %}<tr><td>{{ line }}</td><td>{{ msg }}</td></tr>{% endfor %}</tbody>
+      </table>
+      {% if more_errors %}<p>…and {{ more_errors }} more.</p>{% endif %}
+    {% endif %}
+
+    {% if result.rows %}
+      <h2>{% if result.ok %}Preview: {{ result.rows|length }} row{{ result.rows|length|pluralize }} ready to import{% else %}{{ result.rows|length }} valid row{{ result.rows|length|pluralize }} (not imported while there are problems){% endif %}</h2>
+      <table>
+        <thead><tr><th>Line</th><th>Investment</th><th>Date</th><th>Type</th><th>Amount</th><th>Note</th></tr></thead>
+        <tbody>{% for r in preview_rows %}<tr><td>{{ r.line }}</td><td>{{ r.investment.reference }}</td><td>{{ r.date|date:"Y-m-d" }}</td><td>{{ r.type }}</td><td>{{ r.amount }} {{ r.investment.currency }}</td><td>{{ r.note }}</td></tr>{% endfor %}</tbody>
+      </table>
+      {% if more_rows %}<p>…and {{ more_rows }} more row{{ more_rows|pluralize }} not shown.</p>{% endif %}
+      {% if result.ok %}
+        <form method="post">{% csrf_token %}
+          <textarea name="csv_text" hidden>{{ csv_text }}</textarea>
+          <input type="submit" class="default" value="Confirm and import {{ result.rows|length }} row{{ result.rows|length|pluralize }}">
+        </form>
+      {% endif %}
+    {% endif %}
+    <hr>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">{% csrf_token %}
+    <p><label for="file">CSV file:</label> <input type="file" name="file" id="file" accept=".csv,text/csv" required></p>
+    <input type="submit" value="{% if result %}Upload a different file{% else %}Upload and preview{% endif %}">
+  </form>
+  <p><a href="{% url 'admin:investors_investment_changelist' %}">&larr; Back to investments</a></p>
+</div>
+{% endblock %}

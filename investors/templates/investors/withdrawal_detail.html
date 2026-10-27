@@ -1,0 +1,30 @@
+{% extends "investors/base.html" %}
+{% load investor_extras %}
+{% block title %}Withdrawal {{ wr.reference }}{% endblock %}
+{% block content %}
+<p class="help" style="margin:0 0 8px"><a href="{% url 'investors:withdrawals' %}">← Withdrawals</a></p>
+<h1>{{ wr.reference }}</h1>
+<p class="lead"><span class="tag {{ wr.status }}">{{ wr.get_status_display }}</span></p>
+
+<div class="pt-card grid terms">
+  <div><span>Amount</span>{{ wr.amount|money:wr.currency }}</div>
+  <div><span>From investment</span>{{ wr.investment.plan_name }}</div>
+  <div><span>Paid to</span>{{ wr.destination_label }}</div>
+  <div><span>Submitted</span>{{ wr.submitted_at|date:"j M Y, H:i" }} UTC</div>
+</div>
+
+{% if wr.status == 'declined' and wr.decline_reason %}
+  <h2>Why it was declined</h2>
+  <div class="pt-card"><p style="margin:0">{{ wr.decline_reason|linebreaksbr }}</p></div>
+{% elif wr.status == 'completed' %}
+  <p class="note">Completed on {{ wr.decided_at|date:"j M Y" }}. It appears in your investment's transactions.</p>
+{% elif wr.is_open %}
+  <p class="note">Our team is handling this request and will call you on the number we hold before any payment is made.</p>
+{% endif %}
+
+{% if wr.investor_can_cancel %}
+  <form method="post" action="{% url 'investors:withdrawal_cancel' wr.pk %}" onsubmit="return confirm('Cancel this withdrawal request?');">{% csrf_token %}
+    <button class="btn" type="submit" style="background:transparent;border:1px solid var(--danger);color:var(--danger)">Cancel request</button>
+  </form>
+{% endif %}
+{% endblock %}
