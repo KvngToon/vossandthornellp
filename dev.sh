@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start the app locally the safe way: debug on, local SQLite only, new migrations applied.
 #   ./dev.sh                      run on http://127.0.0.1:8000
-#   DEV_COUNTRY=GB ./dev.sh       pretend to be outside the US (to see the withdrawal block)
+#   DEV_COUNTRY=FR ./dev.sh       pretend to be outside the US/UK (to see the withdrawal block)
 set -euo pipefail
 cd "$(dirname "$0")"
 

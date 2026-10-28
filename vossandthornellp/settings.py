@@ -110,8 +110,9 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 # requests carrying it are trusted to have an honest CF-IPCountry header. Unset = every
 # withdrawal is refused (fails closed).
 CF_ORIGIN_SECRET = os.environ.get('CF_ORIGIN_SECRET', '')
-WITHDRAWAL_ALLOWED_COUNTRIES = ('US',)
-# Local development only (ignored unless DEBUG): pretend to be in this country, e.g. DEV_COUNTRY=GB.
+# Two-letter codes as Cloudflare reports them (the United Kingdom is GB).
+WITHDRAWAL_ALLOWED_COUNTRIES = ('US', 'GB')
+# Local development only (ignored unless DEBUG): pretend to be in this country, e.g. DEV_COUNTRY=FR to see the blocked state.
 DEV_COUNTRY = os.environ.get('DEV_COUNTRY', 'US')
 # Fernet key for encrypting bank details at rest. See investors/crypto.py. Keep a backup.
 FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY', '')

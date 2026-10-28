@@ -1,5 +1,6 @@
 import os
 import random
+import re
 import string
 import uuid
 from decimal import Decimal
@@ -27,6 +28,14 @@ class InvestorProfile(models.Model):
                    'investor, a "demonstration" banner is shown, and superusers may edit and delete everything about the '
                    'account (including withdrawal requests) and open its portal without the password. '
                    'NEVER tick this for a real client.'))
+    withdrawal_any_location = models.BooleanField(
+        default=False, verbose_name='Allow withdrawals from any location',
+        help_text=('Superusers only. Skips the location check for THIS investor: they can start withdrawals from anywhere, '
+                   'including when their location cannot be determined. Requests allowed this way are flagged for the reviewer.'))
+    withdrawal_extra_countries = models.CharField(
+        max_length=60, blank=True, verbose_name='Extra countries allowed for withdrawals',
+        help_text=('Superusers only. Two-letter codes, comma-separated, e.g. CA, IE. Added to the standard list '
+                   '(United States and United Kingdom) for THIS investor only. The United Kingdom is GB.'))
     must_change_password = models.BooleanField(
         default=False, help_text='Set while the investor still has a temporary password. They must choose their own at first sign-in.')
     created_at = models.DateTimeField(default=timezone.now)
@@ -37,10 +46,29 @@ class InvestorProfile(models.Model):
     def __str__(self):
         return self.display_name
 
+    @property
+    def extra_countries(self):
+        return [c for c in re.split(r'[,\s]+', (self.withdrawal_extra_countries or '').upper()) if c]
+
+    @property
+    def location_rule_label(self):
+        if self.withdrawal_any_location:
+            return 'Anywhere'
+        if self.extra_countries:
+            return 'Standard + ' + ', '.join(self.extra_countries)
+        return 'Standard'
+
     def clean(self):
         from django.core.exceptions import ValidationError
         if self.user_id and self.user.is_staff:
             raise ValidationError({'user': 'Staff accounts cannot be investors.'})
+        codes = self.extra_countries
+        for code in codes:
+            if code == 'UK':
+                raise ValidationError({'withdrawal_extra_countries': 'The United Kingdom is GB, not UK.'})
+            if not re.fullmatch(r'[A-Z]{2}', code):
+                raise ValidationError({'withdrawal_extra_countries': f'"{code}" is not a two-letter country code (e.g. CA, IE).'})
+        self.withdrawal_extra_countries = ', '.join(sorted(set(codes)))
 
 
 class Investment(models.Model):
@@ -283,6 +311,9 @@ class WithdrawalRequest(models.Model):
     callback_verified = models.BooleanField(
         default=False, help_text='Tick after phoning the investor on the number we already hold and confirming this request.')
     detected_country = models.CharField(max_length=2, blank=True, editable=False)
+    location_override = models.BooleanField(
+        default=False, editable=False,
+        help_text='Allowed only because this investor has a location override (the standard rule would have refused it).')
     submitted_at = models.DateTimeField(default=timezone.now, editable=False)
     decided_at = models.DateTimeField(null=True, blank=True, editable=False)
     decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,

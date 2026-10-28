@@ -181,20 +181,20 @@ def _safely(fn, *args):
 
 @investor_required
 def withdrawals_list(request):
-    allowed, _ = geo.withdrawals_allowed(request)
+    allowed, _, _ = geo.withdrawal_location(request, request.investor)
     return render(request, 'investors/withdrawals.html', {
         'investor': request.investor,
         'nav': 'withdrawals',
         'requests': request.investor.withdrawals.select_related('investment'),
         'allowed': allowed,
-        'blocked_message': geo.BLOCKED_MESSAGE,
+        'blocked_message': geo.blocked_message(request.investor),
     })
 
 
 @investor_required
 def withdrawal_new(request):
-    allowed, country = geo.withdrawals_allowed(request)
-    base = {'investor': request.investor, 'nav': 'withdrawals', 'blocked_message': geo.BLOCKED_MESSAGE}
+    allowed, country, overridden = geo.withdrawal_location(request, request.investor)
+    base = {'investor': request.investor, 'nav': 'withdrawals', 'blocked_message': geo.blocked_message(request.investor)}
     if not allowed:
         # Same message whether the country is known-and-foreign or could not be determined.
         return render(request, 'investors/withdrawal_new.html', {**base, 'allowed': False},
@@ -215,18 +215,18 @@ def withdrawal_new(request):
                 form.add_error('password', 'That password is not correct.')
             else:
                 throttle.clear(request, user.username)
-                wr = _create_withdrawal(request, form.cleaned_data, country)
+                wr = _create_withdrawal(request, form.cleaned_data, country, overridden)
                 messages.success(request, f'Request {wr.reference} submitted. We will call you on the number we hold before anything is paid.')
                 return redirect('investors:withdrawal_detail', pk=wr.pk)
     return render(request, 'investors/withdrawal_new.html', {
         **base, 'allowed': True, 'form': form, 'has_saved': form.fields['saved_account'].queryset.exists()})
 
 
-def _create_withdrawal(request, data, country):
+def _create_withdrawal(request, data, country, overridden=False):
     inv, dest = data['investment'], data['destination']
     wr = WithdrawalRequest(
         investor=request.investor, investment=inv, amount=data['amount'], currency=inv.currency,
-        destination_type=dest, detected_country=country or '',
+        destination_type=dest, detected_country=country or '', location_override=overridden,
     )
     if dest == 'saved':
         acct = data['saved_account']

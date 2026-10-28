@@ -16,9 +16,10 @@ from investors.models import Investment, InvestorProfile, PayoutAccount, Transac
 PW = 'correct-horse-battery-9'
 SECRET = 'origin-secret-for-tests'
 KEY = Fernet.generate_key().decode()
-BLOCKED = 'Withdrawals can only be initiated from within the United States.'
+BLOCKED = 'Withdrawals can only be initiated from within the United States and the United Kingdom.'
 US = {'HTTP_X_ORIGIN_VERIFY': SECRET, 'HTTP_CF_IPCOUNTRY': 'US'}
-GB = {'HTTP_X_ORIGIN_VERIFY': SECRET, 'HTTP_CF_IPCOUNTRY': 'GB'}
+UK = {'HTTP_X_ORIGIN_VERIFY': SECRET, 'HTTP_CF_IPCOUNTRY': 'GB'}
+FR = {'HTTP_X_ORIGIN_VERIFY': SECRET, 'HTTP_CF_IPCOUNTRY': 'FR'}   # a country that is NOT allowed
 GOOD_ROUTING, GOOD_ACCOUNT = '021000021', '123456789'
 
 cfg = override_settings(CF_ORIGIN_SECRET=SECRET, FIELD_ENCRYPTION_KEY=KEY)
@@ -29,12 +30,30 @@ class GeoTests(TestCase):
     def check(self, **meta):
         return geo.withdrawals_allowed(RequestFactory().get('/', **meta))
 
+    def test_the_united_kingdom_is_allowed_too(self):
+        self.assertEqual(self.check(**UK), (True, 'GB'))
+        self.assertEqual(self.check(HTTP_X_ORIGIN_VERIFY=SECRET, HTTP_CF_IPCOUNTRY='gb'), (True, 'GB'))   # case-insensitive
+
+    def test_only_the_united_states_and_united_kingdom_are_allowed(self):
+        from django.conf import settings
+        self.assertEqual(set(settings.WITHDRAWAL_ALLOWED_COUNTRIES), {'US', 'GB'})
+        for code in ('FR', 'DE', 'IE', 'CA', 'NG', 'AU', 'CN', 'RU', 'IN', 'UK'):   # note: 'UK' is not Cloudflare's code for Britain
+            self.assertEqual(self.check(HTTP_X_ORIGIN_VERIFY=SECRET, HTTP_CF_IPCOUNTRY=code), (False, code), code)
+
+    def test_message_names_exactly_the_allowed_countries(self):
+        self.assertEqual(geo.BLOCKED_MESSAGE, 'Withdrawals can only be initiated from within the United States and the United Kingdom.')
+        with override_settings(WITHDRAWAL_ALLOWED_COUNTRIES=('US',)):
+            self.assertEqual(geo._blocked_message(), 'Withdrawals can only be initiated from within the United States.')
+        with override_settings(WITHDRAWAL_ALLOWED_COUNTRIES=('US', 'GB', 'CA')):
+            self.assertEqual(geo._blocked_message(),
+                             'Withdrawals can only be initiated from within the United States, the United Kingdom and CA.')
+
     def test_us_through_cloudflare_is_allowed(self):
         self.assertEqual(self.check(**US), (True, 'US'))
         self.assertEqual(self.check(HTTP_X_ORIGIN_VERIFY=SECRET, HTTP_CF_IPCOUNTRY='us'), (True, 'US'))
 
     def test_other_country_is_blocked(self):
-        self.assertEqual(self.check(**GB), (False, 'GB'))
+        self.assertEqual(self.check(**FR), (False, 'FR'))
 
     def test_unknown_is_blocked_in_every_form(self):
         cases = [
@@ -55,9 +74,9 @@ class GeoTests(TestCase):
         self.assertEqual(self.check(**US), (False, None))
         self.assertEqual(self.check(HTTP_X_ORIGIN_VERIFY='', HTTP_CF_IPCOUNTRY='US'), (False, None))
 
-    @override_settings(DEBUG=True, DEV_COUNTRY='GB')
+    @override_settings(DEBUG=True, DEV_COUNTRY='FR')
     def test_dev_override_only_in_debug(self):
-        self.assertEqual(self.check(**US), (False, 'GB'))
+        self.assertEqual(self.check(**US), (False, 'FR'))
 
     @override_settings(DEBUG=False, DEV_COUNTRY='US')
     def test_dev_override_ignored_outside_debug(self):
@@ -134,9 +153,18 @@ class CountryRuleViewTests(Base):
         self.assertContains(r, 'Submit request')
         self.assertNotContains(r, BLOCKED)
 
+    def test_a_uk_investor_sees_the_form_and_can_submit(self):
+        r = self.client.get(reverse('investors:withdrawal_new'), **UK)
+        self.assertContains(r, 'Submit request')
+        self.assertNotContains(r, BLOCKED)
+        with mock.patch('investors.emails._send', return_value=True):
+            r = self.submit(meta=UK)
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(WithdrawalRequest.objects.get().detected_country, 'GB')   # recorded for staff
+
     def test_foreign_and_unknown_get_the_identical_message_and_no_form(self):
         responses = [
-            self.client.get(reverse('investors:withdrawal_new'), **GB),
+            self.client.get(reverse('investors:withdrawal_new'), **FR),
             self.client.get(reverse('investors:withdrawal_new')),                                   # no headers
             self.client.get(reverse('investors:withdrawal_new'), HTTP_CF_IPCOUNTRY='US'),           # forged
             self.client.get(reverse('investors:withdrawal_new'), HTTP_X_ORIGIN_VERIFY=SECRET, HTTP_CF_IPCOUNTRY='XX'),
@@ -146,21 +174,21 @@ class CountryRuleViewTests(Base):
             self.assertNotContains(r, 'Submit request')
 
     def test_post_from_blocked_location_creates_nothing(self):
-        for meta in (GB, {}, {'HTTP_CF_IPCOUNTRY': 'US'}):
+        for meta in (FR, {}, {'HTTP_CF_IPCOUNTRY': 'US'}):
             r = self.submit(meta=meta)
             self.assertEqual(r.status_code, 403)
             self.assertContains(r, BLOCKED, status_code=403)
         self.assertEqual(WithdrawalRequest.objects.count(), 0)
 
     def test_list_page_shows_banner_not_button_when_blocked(self):
-        r = self.client.get(reverse('investors:withdrawals'), **GB)
+        r = self.client.get(reverse('investors:withdrawals'), **FR)
         self.assertContains(r, BLOCKED)
         self.assertNotContains(r, 'New withdrawal request</a>')
         self.assertContains(self.client.get(reverse('investors:withdrawals'), **US), 'New withdrawal request</a>')
 
     def test_blocked_investor_can_still_view_existing_requests(self):
         wr = self.make_request()
-        self.assertEqual(self.client.get(reverse('investors:withdrawal_detail', args=[wr.pk]), **GB).status_code, 200)
+        self.assertEqual(self.client.get(reverse('investors:withdrawal_detail', args=[wr.pk]), **FR).status_code, 200)
 
     def make_request(self, **kw):
         defaults = dict(investor=self.profile, investment=self.inv, amount=Decimal('500'), currency='USD',

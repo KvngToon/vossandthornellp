@@ -78,7 +78,7 @@ class DemoDeleteMixin:
 
 @admin.register(InvestorProfile)
 class InvestorProfileAdmin(DemoDeleteMixin, admin.ModelAdmin):
-    list_display = ('display_name', 'user', 'email', 'is_demo', 'is_active', 'created_at')
+    list_display = ('display_name', 'user', 'email', 'is_demo', 'location_rule', 'is_active', 'created_at')
     list_filter = ('is_active', 'is_demo')
     change_list_template = 'admin/investors/investorprofile/change_list.html'
     search_fields = ('display_name', 'user__email', 'user__username')
@@ -176,16 +176,22 @@ class InvestorProfileAdmin(DemoDeleteMixin, admin.ModelAdmin):
             kwargs['fields'] = InvestorAddForm.Meta.fields
         return super().get_form(request, obj, **kwargs)
 
+    @admin.display(description='Withdrawal location rule')
+    def location_rule(self, obj):
+        return obj.location_rule_label
+
     def get_readonly_fields(self, request, obj=None):
         fields = list(super().get_readonly_fields(request, obj))
         if not request.user.is_superuser:
-            fields.append('is_demo')  # only superusers may switch demo mode on or off
+            # only superusers may switch demo mode, or the withdrawal location rule, for an investor
+            fields += ['is_demo', 'withdrawal_any_location', 'withdrawal_extra_countries']
         return fields
 
     def get_fields(self, request, obj=None):
         if obj is None:
             return InvestorAddForm.Meta.fields
-        return ('user', 'display_name', 'phone', 'is_active', 'must_change_password', 'is_demo')
+        return ('user', 'display_name', 'phone', 'is_active', 'must_change_password', 'is_demo',
+                'withdrawal_any_location', 'withdrawal_extra_countries')
 
     def save_model(self, request, obj, form, change):
         if change:
@@ -543,16 +549,16 @@ class WithdrawalRequestAdmin(RevealMixin, admin.ModelAdmin):
     form = WithdrawalStaffForm
     change_list_template = 'admin/investors/withdrawalrequest/change_list.html'
     list_display = ('reference', 'investor', 'amount_display', 'destination_label', 'status',
-                    'callback_verified', 'detected_country', 'submitted_at')
-    list_filter = ('status', 'destination_type', 'callback_verified')
+                    'callback_verified', 'detected_country', 'location_override', 'submitted_at')
+    list_filter = ('status', 'destination_type', 'callback_verified', 'location_override')
     search_fields = ('reference', 'investor__display_name')
     date_hierarchy = 'submitted_at'
     fieldsets = (
-        ('Request', {'fields': ('reference', 'investor', 'investment', 'amount_display', 'submitted_at', 'detected_country')}),
+        ('Request', {'fields': ('reference', 'investor', 'investment', 'amount_display', 'submitted_at', 'detected_country', 'location_override')}),
         ('Destination', {'fields': ('destination_type', 'destination_label', 'holder_name', 'bank_name', 'masked_account')}),
         ('Review', {'fields': ('status', 'callback_verified', 'decline_reason', 'staff_note', 'decided_by', 'decided_at', 'transaction')}),
     )
-    readonly_fields = ('reference', 'investor', 'investment', 'amount_display', 'submitted_at', 'detected_country',
+    readonly_fields = ('reference', 'investor', 'investment', 'amount_display', 'submitted_at', 'detected_country', 'location_override',
                        'destination_type', 'destination_label', 'holder_name', 'bank_name', 'masked_account',
                        'decided_by', 'decided_at', 'transaction')
 
@@ -571,7 +577,7 @@ class WithdrawalRequestAdmin(RevealMixin, admin.ModelAdmin):
         if self._demo_super(request, obj):
             return (
                 ('Request (demo: everything is editable)', {'fields': (
-                    'reference', 'investor', 'investment', 'status', 'amount', 'currency', 'edit_submitted_at', 'edit_detected_country')}),
+                    'reference', 'investor', 'investment', 'status', 'amount', 'currency', 'edit_submitted_at', 'edit_detected_country', 'location_override')}),
                 ('Destination', {'fields': ('destination_type', 'destination_label', 'holder_name', 'bank_name',
                                             'masked_account', 'account_number', 'routing_number')}),
                 ('Review', {'fields': ('callback_verified', 'decline_reason', 'staff_note', 'edit_decided_at')}),
@@ -580,7 +586,7 @@ class WithdrawalRequestAdmin(RevealMixin, admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         if self._demo_super(request, obj):
-            return ('reference', 'investor', 'investment', 'masked_account')
+            return ('reference', 'investor', 'investment', 'masked_account', 'location_override')
         return super().get_readonly_fields(request, obj)
 
     def has_delete_permission(self, request, obj=None):
