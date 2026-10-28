@@ -18,7 +18,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import connection, transaction
 from django.utils import timezone
 
 from .models import (Document, Investment, InvestorProfile, NotificationLog, PayoutAccount, Transaction,
@@ -185,6 +185,7 @@ def aware(d):
 
 
 
+DEMO_LOCK_ID = 7410021  # arbitrary number identifying 'a demo-data run is in progress' to the database
 FILE_WORKERS = 8  # parallel uploads/deletes; each is a network round trip when documents live in Supabase Storage
 
 
@@ -219,6 +220,21 @@ class DemoSeeder:
         self._wr_batch, self._tx_batch = [], []
 
     # ── round-trip savers ────────────────────────────────────────────────────────────────────────
+    def _take_lock(self):
+        """Refuse to start while another demo-data run is in progress (a double click, two tabs).
+
+        PostgreSQL only: a transaction-level advisory lock, released automatically at commit/rollback, and
+        compatible with Supabase's transaction pooler. Without it both runs create the same users at once
+        and one dies on a duplicate-username error. SQLite serialises writers itself."""
+        if connection.vendor != 'postgresql':
+            return
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT pg_try_advisory_xact_lock(%s)', [DEMO_LOCK_ID])
+            acquired = cursor.fetchone()[0]
+        if not acquired:
+            raise DemoDataError('Another demo-data run is already in progress. Wait for it to finish, then check the '
+                                'investor list before trying again.')
+
     def _check_time(self):
         """Stop cleanly (the whole run rolls back) before the web server would kill the worker."""
         if self.deadline is not None and clock.monotonic() > self.deadline:
@@ -272,6 +288,7 @@ class DemoSeeder:
         self.deadline = started + getattr(settings, 'DEMO_SEED_MAX_SECONDS', 75)
         try:
             with transaction.atomic():
+                self._take_lock()
                 if reset or rebuild_custom:
                     self.clear_data(self.demo_profiles(any_email=rebuild_custom))
                 return sum(self.seed_investor(spec) for spec in SEEDED)
@@ -301,6 +318,7 @@ class DemoSeeder:
     def remove(self):
         """Delete every demo account AND its data. Returns {'investors': n}."""
         with transaction.atomic():
+            self._take_lock()
             profiles = self.demo_profiles()
             users = list(profiles.values_list('user_id', flat=True))
             self.clear_data()
@@ -399,6 +417,7 @@ class DemoSeeder:
             raise DemoDataError(f'{profile.display_name} already has data. Choose "replace" to rebuild it, or leave it as it is.')
         self.deadline = clock.monotonic() + getattr(settings, 'DEMO_SEED_MAX_SECONDS', 75)
         with transaction.atomic():
+            self._take_lock()
             if has_data:
                 self.clear_data(InvestorProfile.objects.filter(pk=profile.pk))
             return self.populate(profile, spec)

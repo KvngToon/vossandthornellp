@@ -12,7 +12,7 @@
     <tbody>{% for r in rows %}<tr><td>{{ r.profile.display_name }} <code>({{ r.profile.user.username }})</code></td><td>{{ r.investments }}</td><td>{{ r.withdrawals }}</td><td>{{ r.documents }}</td></tr>{% endfor %}</tbody>
   </table>
 
-  <form method="post" style="margin-top:1.5em">{% csrf_token %}
+  <form method="post" style="margin-top:1.5em" onsubmit="var b=this.querySelector('[type=submit]'); b.disabled=true; b.value='Working… please wait';">{% csrf_token %}
     <input type="hidden" name="action" value="fill_with_demo_history">
     <input type="hidden" name="apply" value="1">
     {% for pk in ids %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ pk }}">{% endfor %}

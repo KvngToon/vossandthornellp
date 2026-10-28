@@ -25,7 +25,7 @@
   <p>Adds three fictional investors (Colin Firth with over $1M and a record since January 2020, Demo Investor, and Chidi Okafor on a temporary password) with plans, valuations, accounts on file and years of withdrawal requests, paid and declined. No PDF documents are created.
      If demo accounts already exist, anything missing is added and <strong>their passwords are reset</strong>.
      A real account that uses a demo username is never touched; the tool stops instead.</p>
-  <form method="post">{% csrf_token %}
+  <form method="post" onsubmit="var b=this.querySelector('[type=submit]'); b.disabled=true; b.value='Working… please wait';">{% csrf_token %}
     <input type="hidden" name="action" value="create">
     <p><label>How many years back should the oldest plan start? <input type="number" name="years" value="6" min="1" max="10" style="width:5em"></label></p>
     <p><label><input type="checkbox" name="rebuild"> <strong>Rebuild existing demo accounts from scratch.</strong>
@@ -38,7 +38,7 @@
   <h2>Remove demo data</h2>
   {% if exists %}
     <p>Deletes every flagged demo investor, their accounts and all of their data, including stored PDFs. Real clients are never affected.</p>
-    <form method="post">{% csrf_token %}
+    <form method="post" onsubmit="var b=this.querySelector('[type=submit]'); b.disabled=true; b.value='Working… please wait';">{% csrf_token %}
       <input type="hidden" name="action" value="remove">
       <p><label>Type <code>{{ remove_phrase }}</code> to confirm: <input type="text" name="confirm" autocomplete="off" size="24"></label></p>
       <input type="submit" value="Remove demo data" style="background:#ba2121;color:#fff">

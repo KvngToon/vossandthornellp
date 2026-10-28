@@ -8,7 +8,7 @@ from django.contrib.admin.models import CHANGE, LogEntry
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -144,6 +144,10 @@ class InvestorProfileAdmin(DemoDeleteMixin, admin.ModelAdmin):
                         made = seeder.run(rebuild_custom=rebuild)
                     except DemoDataError as exc:
                         context['error'] = str(exc)
+                    except IntegrityError:
+                        # something else wrote the same rows at the same moment; the whole attempt rolled back
+                        context['error'] = ('Nothing was created because another change happened at the same moment. '
+                                            'Check the investor list, then try once more (and click only once).')
                     except ImproperlyConfigured as exc:
                         # e.g. FIELD_ENCRYPTION_KEY missing: the whole attempt rolled back, nothing was created
                         context['error'] = f'Nothing was created. Server setting missing: {exc}'
@@ -154,9 +158,13 @@ class InvestorProfileAdmin(DemoDeleteMixin, admin.ModelAdmin):
                 if typed != self.REMOVE_PHRASE:
                     context['error'] = f'Type {self.REMOVE_PHRASE} exactly to confirm.'
                 else:
-                    result = DemoSeeder().remove()
-                    self._log_demo(request, f'Removed demo data ({result["investors"]} demo investor(s)).')
-                    context['removed'] = result['investors']
+                    try:
+                        result = DemoSeeder().remove()
+                    except DemoDataError as exc:
+                        context['error'] = str(exc)
+                    else:
+                        self._log_demo(request, f'Removed demo data ({result["investors"]} demo investor(s)).')
+                        context['removed'] = result['investors']
         context['exists'] = DemoSeeder.exists()
         response = TemplateResponse(request, 'admin/investors/investorprofile/demo_data.html', context)
         response['Cache-Control'] = 'no-store'  # the page can contain one-time passwords
