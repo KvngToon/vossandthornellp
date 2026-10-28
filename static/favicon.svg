@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Voss &amp; Thorne</title>
+  <rect width="512" height="512" rx="96" fill="rgb(7, 7, 13)"/>
+  <rect x="18" y="18" width="476" height="476" rx="80" fill="none" stroke="rgb(201, 168, 76)" stroke-width="12"/>
+  <polygon fill="rgb(201, 168, 76)" points="108,136 188,136 256,312 324,136 404,136 296,392 216,392"/>
+  <rect x="150" y="424" width="212" height="12" fill="rgb(201, 168, 76)"/>
+</svg>

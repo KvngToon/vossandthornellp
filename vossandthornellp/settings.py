@@ -160,6 +160,10 @@ ACTIVITY_NOTIFY_EMAIL = os.environ.get(
 # Base URL used to build links in notification emails (no trailing slash).
 SITE_URL = os.environ.get('SITE_URL', 'https://vossandthornellp.org')
 
+# ── Admin theme ───────────────────────────────────────────────────────────────
+# Only the tab icon is customised; every other Jazzmin setting keeps its default.
+JAZZMIN_SETTINGS = {'site_icon': 'apple-touch-icon.png'}
+
 # ── Misc ───────────────────────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
