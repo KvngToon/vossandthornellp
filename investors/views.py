@@ -86,6 +86,7 @@ def home(request):
     rows = [r for r in summary['rows'] if r['investment'].currency == currency]
     return render(request, 'investors/home.html', {
         'investor': request.investor,
+        'today': date.today(),
         'nav': 'dashboard',
         'currency': currency,
         'currencies': [c['currency'] for c in summary['by_currency']],

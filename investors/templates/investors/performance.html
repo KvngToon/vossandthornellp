@@ -6,19 +6,19 @@
 <p class="lead">How your portfolio has grown, year by year.</p>
 
 {% if not rows %}
-  <div class="pt-card"><p class="lead" style="margin:0">Nothing to show yet.</p></div>
+  <p class="lead">There is nothing to show yet. Your yearly figures will appear once you have an investment.</p>
 {% else %}
   {% if currencies|length > 1 %}
     <div class="chips" role="group" aria-label="Currency">
       {% for c in currencies %}<a class="chip" href="?currency={{ c }}" {% if c == currency %}aria-current="true"{% endif %}>{{ c }}</a>{% endfor %}
     </div>
   {% endif %}
-  <div class="pt-card" style="margin-top:16px">
+  <div class="chart-block" style="margin-top:8px">
     <div class="chart-box sm" role="img" aria-label="Gain earned in each year"><canvas id="perf-canvas"></canvas></div>
   </div>
 
   <h2>Year by year</h2>
-  <div class="pt-card tablewrap" style="padding:8px 12px">
+  <div class="tablewrap">
     <table class="t">
       <thead><tr><th>Year</th><th class="num">Opening value</th><th class="num">New money</th>{% if any_withdrawn %}<th class="num">Withdrawn</th>{% endif %}<th class="num">Closing value</th><th class="num">Gain</th><th class="num">Return</th></tr></thead>
       <tbody>
@@ -46,15 +46,21 @@
   (function () {
     var data = JSON.parse(document.getElementById('perf').textContent);
     var css = getComputedStyle(document.documentElement);
-    var gold = css.getPropertyValue('--accent').trim(), muted = css.getPropertyValue('--muted').trim(), border = css.getPropertyValue('--border').trim();
+    function token(name) { return css.getPropertyValue(name).trim(); }
+    var oxford = token('--oxford'), brass = token('--brass'), garnet = token('--garnet'), slate = token('--slate'),
+        fog = token('--fog'), fog2 = token('--fog-2'), ink = token('--ink'), sans = token('--sans');
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    Chart.defaults.font.family = sans; Chart.defaults.font.size = 12; Chart.defaults.color = slate;
     var cur = '{{ currency|escapejs }}';
     function fmt(v) { return new Intl.NumberFormat('en-US', {style: 'currency', currency: cur, maximumFractionDigits: 0}).format(v); }
     new Chart(document.getElementById('perf-canvas'), {
       type: 'bar',
-      data: {labels: data.labels, datasets: [{label: 'Gain', data: data.gain, backgroundColor: gold, borderRadius: 3}]},
-      options: {responsive: true, maintainAspectRatio: false,
-        plugins: {legend: {display: false}, tooltip: {callbacks: {label: function (c) { return 'Gain: ' + fmt(c.parsed.y); }}}},
-        scales: {x: {grid: {display: false}, ticks: {color: muted}}, y: {grid: {color: border}, ticks: {color: muted, callback: fmt}}}}
+      data: {labels: data.labels, datasets: [{label: 'Gain', data: data.gain, borderRadius: 2, maxBarThickness: 56,
+              backgroundColor: function (c) { return c.raw < 0 ? garnet : oxford; }, hoverBackgroundColor: brass}]},
+      options: {responsive: true, maintainAspectRatio: false, animation: calm ? false : {duration: 700, easing: 'easeOutQuart'},
+        plugins: {legend: {display: false}, tooltip: {backgroundColor: '#ffffff', titleColor: oxford, bodyColor: ink, borderColor: fog2, borderWidth: 1,
+                  padding: 12, cornerRadius: 2, displayColors: false, callbacks: {label: function (c) { return 'Gain: ' + fmt(c.parsed.y); }}}},
+        scales: {x: {grid: {display: false}, border: {color: fog2}, ticks: {color: slate}}, y: {grid: {color: fog}, border: {display: false}, ticks: {color: slate, callback: fmt, padding: 8}}}}
     });
   })();
   </script>

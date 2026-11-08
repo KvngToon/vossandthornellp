@@ -3,7 +3,7 @@
 {% block content %}
 <h1>Documents</h1>
 <p class="lead">Statements and agreements shared with you.</p>
-<div class="pt-card tablewrap" style="padding:8px 12px">
+<div class="tablewrap">
   {% if documents %}
   <table class="t">
     <thead><tr><th>Document</th><th>Type</th><th>Investment</th><th>Added</th><th></th></tr></thead>
@@ -19,6 +19,6 @@
     {% endfor %}
     </tbody>
   </table>
-  {% else %}<p class="note" style="margin:12px">No documents yet. New statements will appear here.</p>{% endif %}
+  {% else %}<p class="note">There are no documents yet. New statements will appear here as soon as they are ready.</p>{% endif %}
 </div>
 {% endblock %}

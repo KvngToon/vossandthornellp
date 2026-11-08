@@ -8,10 +8,10 @@
     <a class="btn" href="{% url 'investors:withdrawals' %}">Back to withdrawals</a>
   </div>
 {% else %}
-<p class="help" style="margin:0 0 8px"><a href="{% url 'investors:withdrawals' %}">← Withdrawals</a></p>
+<p class="crumb"><a href="{% url 'investors:withdrawals' %}">Back to withdrawals</a></p>
 <h1>New withdrawal request</h1>
 <p class="lead">We review every request and call you on the number we hold before paying. Funds are never moved automatically.</p>
-<div class="pt-card" style="max-width:620px">
+<div class="pt-form">
   <form method="post" novalidate autocomplete="off">{% csrf_token %}
     {{ form.non_field_errors }}
     <label for="{{ form.investment.id_for_label }}">Investment</label>{{ form.investment }}{{ form.investment.errors }}

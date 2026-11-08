@@ -29,3 +29,9 @@ def signed_pct(value):
 def trend(value):
     """CSS class for a gain/loss figure."""
     return 'up' if Decimal(value) > 0 else ('down' if Decimal(value) < 0 else 'flat')
+
+
+@register.filter
+def money_abs(value, currency='USD'):
+    """Like `money`, but without a minus sign: for sentences that already say 'less than' or 'more than'."""
+    return money(abs(Decimal(value)), currency)

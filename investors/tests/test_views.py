@@ -116,8 +116,9 @@ class WithdrawalDisplayTests(TestCase):
         totals = r.context['totals']
         self.assertEqual(totals['withdrawn'], Decimal('4000.00'))
         self.assertEqual(totals['gain'], totals['value'] + Decimal('4000.00') - Decimal('10000'))
-        self.assertContains(r, 'after $4,000.00 withdrawn')
+        self.assertContains(r, 'Together with the $4,000.00 you have already withdrawn')   # the hero sentence says so
         self.assertContains(r, 'including money withdrawn')
+        self.assertContains(r, 'paid out to you')
 
     def test_investment_page_shows_withdrawn_and_corrected_gain(self):
         r = self.client.get(reverse('investors:investment', args=[self.inv.reference]))

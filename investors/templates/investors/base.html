@@ -4,117 +4,194 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content="#07070d" />
+  <meta name="theme-color" content="#ffffff" />
   <!-- Site icon: SVG for modern browsers, ICO fallback, and the iPhone/iPad home-screen icon -->
   <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml" />
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="48x48" />
   <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}" />
-  <title>{% block title %}Investor Portal{% endblock %} · Voss &amp; Thorne</title>
+  <title>{% block title %}Investor portal{% endblock %} | Voss &amp; Thorne</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet" />
   <style>
+    /* The private statement: white paper, blue-black ink, brass used sparingly. */
     :root {
-      --bg: #07070d; --surface: #0e0e18; --border: #1f1f35;
-      --accent: #c9a84c; --accent-hi: #e2c06a;
-      --text: #dde0ee; --muted: #8a8aa5; --danger: #e84545; --success: #3ecf8e;
-      --ff-display: 'Barlow Condensed', sans-serif;
-      --ff-mono: 'IBM Plex Mono', monospace;
-      --ff-body: 'Instrument Serif', serif;
+      --paper: #ffffff;   --ink: #14202e;     --oxford: #0b2545;  --oxford-2: #17406f;
+      --brass: #a8832f;   --brass-deep: #7a5c1b;
+      --slate: #566577;   --fog: #e4e8ed;     --fog-2: #cfd6de;   --mist: #f5f7fa;
+      --evergreen: #1e6b4a; --garnet: #a12b3a;
+      --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+      --sans: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      /* names the inline styles and charts already use */
+      --bg: var(--paper); --surface: var(--paper); --border: var(--fog); --accent: var(--brass);
+      --accent-hi: var(--brass-deep); --text: var(--ink); --muted: var(--slate);
+      --danger: var(--garnet); --success: var(--evergreen);
     }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--ff-body); font-size: 18px; min-height: 100vh; }
-    a { color: var(--accent); }
-    .pt-bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid var(--border); }
-    .pt-brand { font-family: var(--ff-display); font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); text-decoration: none; }
-    .pt-brand small { display: block; font-family: var(--ff-mono); font-size: 10px; letter-spacing: .2em; color: var(--muted); font-weight: 400; }
-    .pt-main { max-width: 1100px; margin: 0 auto; padding: 32px 24px 64px; }
-    .pt-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 32px; }
-    .pt-narrow { max-width: 420px; margin: 8vh auto 0; }
-    h1 { font-family: var(--ff-display); font-size: 34px; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 8px; }
-    p.lead { color: var(--muted); margin: 0 0 24px; }
-    label { display: block; font-family: var(--ff-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 18px 0 6px; }
-    input[type=email], input[type=password], input[type=text] {
-      width: 100%; padding: 12px 14px; background: var(--bg); color: var(--text);
-      border: 1px solid var(--border); border-radius: 4px; font: 16px var(--ff-mono);
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; background: var(--paper); color: var(--ink); min-height: 100vh;
+      font: 400 1rem/1.6 var(--sans); font-variant-numeric: lining-nums tabular-nums;
+      display: flex; flex-direction: column; -webkit-font-smoothing: antialiased;
     }
-    input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-    .btn { display: inline-block; margin-top: 24px; padding: 13px 28px; background: var(--accent); color: #07070d; border: 0; border-radius: 3px;
-           font: 700 12px var(--ff-mono); letter-spacing: .18em; text-transform: uppercase; cursor: pointer; text-decoration: none; }
-    .btn:hover { background: var(--accent-hi); }
-    .btn-link { background: none; border: 0; color: var(--muted); font: 12px var(--ff-mono); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; padding: 0; }
-    .errorlist { list-style: none; margin: 8px 0 0; padding: 0; color: var(--danger); font-family: var(--ff-mono); font-size: 13px; }
-    .helptext, .help { color: var(--muted); font-family: var(--ff-mono); font-size: 12px; margin-top: 6px; }
-    .helptext ul { padding-left: 18px; }
-    .alert { border: 1px solid var(--danger); color: var(--danger); border-radius: 4px; padding: 10px 14px; font-family: var(--ff-mono); font-size: 13px; margin-bottom: 8px; }
-    .pt-nav { display: flex; align-items: center; gap: 24px; font-family: var(--ff-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
-    .pt-nav a { color: var(--muted); text-decoration: none; padding-bottom: 4px; border-bottom: 2px solid transparent; }
-    .pt-nav a:hover { color: var(--text); }
-    .pt-nav a[aria-current=page] { color: var(--accent); border-color: var(--accent); }
+    a { color: var(--brass-deep); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    a:hover { color: var(--oxford); }
+    :focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; border-radius: 2px; }
+
+    /* ── Masthead ─────────────────────────────────────────── */
+    .mast { border-bottom: 1px solid var(--fog); background: var(--paper); position: relative; }
+    .mast::after { content: ''; position: absolute; left: max(32px, calc((100% - 1040px) / 2 + 32px)); bottom: -1px; width: 72px; height: 2px; background: var(--brass); }
+    .mast__inner { max-width: 1104px; margin: 0 auto; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; gap: 12px 32px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--oxford); }
+    .brand img { width: 30px; height: 30px; display: block; }
+    .brand__name { font: 500 1.4rem/1 var(--serif); letter-spacing: .01em; color: var(--oxford); }
+    .brand__sub { font: 400 .875rem/1 var(--sans); color: var(--slate); padding-left: 14px; border-left: 1px solid var(--fog-2); }
+    .pt-nav { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 28px; font-size: .9375rem; }
+    .pt-nav a { color: var(--slate); text-decoration: none; padding: 6px 0; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; }
+    .pt-nav a:hover { color: var(--oxford); }
+    .pt-nav a[aria-current=page] { color: var(--oxford); border-bottom-color: var(--brass); font-weight: 500; }
     .pt-nav form { margin: 0; }
-    .grid { display: grid; gap: 16px; }
-    .stats { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin: 20px 0 28px; }
-    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; }
-    .stat .k { font: 11px var(--ff-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
-    .stat .v { font: 800 34px var(--ff-display); letter-spacing: .02em; margin-top: 6px; }
-    .stat .s { font: 12px var(--ff-mono); color: var(--muted); margin-top: 2px; }
-    .up { color: var(--success); } .down { color: var(--danger); } .flat { color: var(--muted); }
+    .btn-link { background: none; border: 0; padding: 6px 0; color: var(--slate); font: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: var(--fog-2); text-underline-offset: 4px; }
+    .btn-link:hover { color: var(--oxford); text-decoration-color: var(--brass); }
+
+    .demo-banner { background: #faf6ea; border-bottom: 1px solid #e8dcb8; color: var(--oxford); text-align: center; padding: 9px 20px; font-size: .875rem; }
+
+    /* ── Page ─────────────────────────────────────────────── */
+    .pt-main { width: 100%; max-width: 1104px; margin: 0 auto; padding: 56px 32px 96px; flex: 1; }
+    h1, h2 { font-family: var(--serif); font-weight: 400; color: var(--oxford); margin: 0; }
+    h1 { font-size: clamp(1.75rem, 3.4vw, 2.25rem); line-height: 1.15; letter-spacing: -.01em; margin-bottom: .35em; }
+    h2 { font-size: 1.5rem; line-height: 1.2; margin: 64px 0 0; padding-bottom: 12px; border-bottom: 1px solid var(--fog-2); }
+    p.lead { color: var(--slate); font-size: 1.0625rem; max-width: 62ch; margin: 0 0 28px; }
+    .note { color: var(--slate); font-size: .875rem; max-width: 70ch; margin: 14px 0 0; }
+    .help, .helptext { color: var(--slate); font-size: .8125rem; margin-top: 6px; }
+    .helptext ul { padding-left: 18px; margin: 6px 0 0; }
+    .crumb { margin: 0 0 18px; font-size: .9375rem; }
+    .crumb a { color: var(--slate); }
+    .crumb a:hover { color: var(--oxford); }
+
+    /* ── Hero: what the portfolio is worth, in a sentence ─── */
+    .hero { margin: 8px 0 44px; }
+    .hero__lead { font: 400 1.25rem/1.4 var(--serif); color: var(--slate); margin: 0; }
+    .hero__figure { font: 300 clamp(2.9rem, 8vw, 5rem)/1.04 var(--serif); letter-spacing: -.02em; color: var(--oxford); margin: .12em 0 .18em; font-feature-settings: 'lnum', 'tnum'; font-optical-sizing: auto; }
+    .hero__sentence { color: var(--slate); font-size: 1.0625rem; max-width: 58ch; margin: 0; }
+
+    /* ── Ruled facts row (also used for the stats on a plan) ─ */
+    .grid { display: grid; }
+    .stats { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin: 0 0 8px; border-top: 1px solid var(--fog-2); border-bottom: 1px solid var(--fog-2); }
+    .stat { padding: 22px 24px 22px 0; }
+    .stat + .stat { border-left: 1px solid var(--fog); padding-left: 24px; }
+    .stat .k { font-size: .875rem; color: var(--slate); }
+    .stat .v { font: 400 1.75rem/1.2 var(--serif); color: var(--oxford); margin-top: 4px; font-feature-settings: 'lnum', 'tnum'; }
+    .stat .s { font-size: .8125rem; color: var(--slate); margin-top: 3px; }
+    .up { color: var(--evergreen) !important; } .down { color: var(--garnet) !important; } .flat { color: var(--slate) !important; }
+    .bar { height: 3px; background: var(--fog); margin-top: 12px; overflow: hidden; }
+    .bar > i { display: block; height: 100%; background: var(--brass); }
+
+    /* ── Chart (open on the page, no box) ─────────────────── */
+    .chart-block { margin: 40px 0 0; }
     .chart-box { position: relative; height: 340px; }
     .chart-box.sm { height: 260px; }
-    h2 { font: 700 14px var(--ff-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin: 36px 0 12px; }
-    .chips { display: flex; gap: 8px; margin-top: 8px; }
-    .chip { font: 12px var(--ff-mono); letter-spacing: .1em; padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); text-decoration: none; }
-    .chip[aria-current=true] { border-color: var(--accent); color: var(--accent); }
-    table.t { width: 100%; border-collapse: collapse; font-family: var(--ff-mono); font-size: 13px; }
-    table.t th { text-align: left; font-weight: 500; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--border); }
-    table.t td { padding: 14px 12px; border-bottom: 1px solid var(--border); }
-    table.t .num { text-align: right; white-space: nowrap; }
+    .chips { display: flex; gap: 6px; margin: 0 0 28px; }
+    .chip { font-size: .875rem; padding: 6px 16px; border: 1px solid var(--fog-2); border-radius: 2px; color: var(--slate); text-decoration: none; }
+    .chip:hover { color: var(--oxford); border-color: var(--oxford); }
+    .chip[aria-current=true] { background: var(--oxford); border-color: var(--oxford); color: #fff; }
+
+    /* ── Ledger tables ────────────────────────────────────── */
     .tablewrap { overflow-x: auto; }
-    .tag { font: 11px var(--ff-mono); letter-spacing: .12em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; border: 1px solid var(--border); color: var(--muted); }
-    .tag.active { color: var(--success); border-color: var(--success); }
-    .bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 10px; }
-    .bar > i { display: block; height: 100%; background: var(--accent); }
-    .terms { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-    .terms div { font-family: var(--ff-mono); font-size: 13px; }
-    .terms span { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
-    .note { font: 12px var(--ff-mono); color: var(--muted); margin-top: 14px; }
-    @media (max-width: 640px) { .pt-bar { flex-direction: column; gap: 12px; } .pt-main { padding: 20px 16px 48px; } .pt-card { padding: 20px; } }
-    .alert.ok-success { border-color: var(--success); color: var(--success); }
-    select, textarea { width: 100%; padding: 12px 14px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font: 16px var(--ff-mono); }
-    input[type=number] { width: 100%; padding: 12px 14px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font: 16px var(--ff-mono); }
-    .radios { list-style: none; padding: 0; margin: 6px 0 0; } .radios li { margin: 8px 0; }
-    .radios label { display: inline; font-size: 14px; text-transform: none; letter-spacing: 0; color: var(--text); margin: 0 0 0 8px; }
-    .blocked { border-color: var(--danger); } .blocked h1 { color: var(--danger); }
-    .tag.submitted, .tag.under_review, .tag.approved { color: var(--accent); border-color: var(--accent); }
-    .tag.completed { color: var(--success); border-color: var(--success); }
-    .tag.declined, .tag.cancelled { color: var(--danger); border-color: var(--danger); }
-    .demo-banner { background: repeating-linear-gradient(45deg, #2a2208, #2a2208 12px, #231c06 12px, #231c06 24px); color: var(--accent); text-align: center; padding: 8px 16px; font: 12px var(--ff-mono); letter-spacing: .12em; text-transform: uppercase; border-bottom: 1px solid var(--accent-lo, #8a7030); }
-    .foot { margin-top: 24px; font-family: var(--ff-mono); font-size: 12px; }
+    table.t { width: 100%; border-collapse: collapse; font-size: .9375rem; }
+    table.t th { text-align: left; font-weight: 500; font-size: .8125rem; color: var(--slate); padding: 14px 16px 12px 0; border-bottom: 1px solid var(--fog-2); white-space: nowrap; }
+    table.t td { padding: 14px 16px 14px 0; border-bottom: 1px solid var(--fog); vertical-align: top; }
+    table.t tbody tr:hover td { background: var(--mist); }
+    table.t th:last-child, table.t td:last-child { padding-right: 0; }
+    table.t .num { text-align: right; white-space: nowrap; }
+    table.t td:first-child { min-width: 170px; }
+    table.t td a { color: var(--oxford); font: 400 1.0625rem/1.3 var(--serif); text-decoration-color: var(--brass); }
+    table.t td a:hover { color: var(--brass-deep); }
+    table.t .help { display: block; margin-top: 2px; }
+    .tag { display: inline-flex; align-items: center; gap: 8px; font-size: .875rem; color: var(--ink); white-space: nowrap; }
+    .tag::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--slate); }
+    .tag.active::before, .tag.completed::before { background: var(--evergreen); }
+    .tag.submitted::before, .tag.under_review::before, .tag.approved::before { background: var(--brass); }
+    .tag.declined::before, .tag.cancelled::before { background: var(--garnet); }
+    .terms { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0; border-bottom: 1px solid var(--fog-2); }
+    .terms div { padding: 18px 24px 18px 0; font-size: 1rem; color: var(--ink); }
+    .terms span { display: block; font-size: .8125rem; color: var(--slate); margin-bottom: 3px; }
+
+    /* ── Forms, buttons, messages ─────────────────────────── */
+    .pt-card { background: var(--paper); border: 1px solid var(--fog); border-top: 2px solid var(--brass); border-radius: 2px; padding: 40px; box-shadow: 0 1px 2px rgba(11,37,69,.04), 0 18px 40px rgba(11,37,69,.06); }
+    .pt-narrow { max-width: 440px; margin: 6vh auto 0; }
+    .pt-form { max-width: 560px; }
+    label { display: block; font-size: .875rem; font-weight: 500; color: var(--ink); margin: 22px 0 6px; }
+    input[type=email], input[type=password], input[type=text], input[type=number], select, textarea {
+      width: 100%; padding: 12px 14px; background: var(--paper); color: var(--ink); border: 1px solid #c5ced8; border-radius: 2px;
+      font: 400 1rem var(--sans); transition: border-color .15s, box-shadow .15s;
+    }
+    select { appearance: none; -webkit-appearance: none; padding-right: 40px;
+      background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%230b2545' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 14px center; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--oxford); box-shadow: 0 0 0 3px rgba(11,37,69,.14); }
+    input[type=checkbox], input[type=radio] { accent-color: var(--oxford); width: 1.05rem; height: 1.05rem; }
+    .btn { display: inline-block; margin-top: 28px; padding: 13px 28px; background: var(--oxford); color: #fff; border: 1px solid var(--oxford); border-radius: 2px;
+           font: 600 .9375rem var(--sans); letter-spacing: .01em; cursor: pointer; text-decoration: none; transition: background .15s; }
+    .btn:hover { background: var(--oxford-2); color: #fff; }
+    .errorlist { list-style: none; margin: 8px 0 0; padding: 0; color: var(--garnet); font-size: .875rem; }
+    .alert { border-left: 3px solid var(--garnet); background: #fbf1f2; color: #7d1f2c; border-radius: 2px; padding: 12px 16px; font-size: .9375rem; margin: 0 0 20px; }
+    .alert.ok-success { border-left-color: var(--evergreen); background: #f0f7f3; color: #14513a; }
+    .alert.ok-info, .alert.ok-debug { border-left-color: var(--oxford); background: var(--mist); color: var(--oxford); }
+    .alert.ok-warning { border-left-color: var(--brass); background: #faf6ea; color: #5d4614; }
+    .radios, #id_destination { margin-top: 8px; }
+    #id_destination > div { margin: 6px 0; }
+    #id_destination label { display: flex; align-items: center; gap: 10px; font-weight: 400; margin: 0; padding: 8px 0; }
+    .blocked { border-top-color: var(--garnet); }
+    .foot { margin-top: 28px; font-size: .9375rem; }
+    .pt-foot { border-top: 1px solid var(--fog); padding: 22px 32px 28px; text-align: center; color: var(--slate); font-size: .8125rem; }
+
+    @media (max-width: 720px) {
+      .mast::after { left: 20px; }
+      .mast__inner { padding: 16px 20px; }
+      .pt-main { padding: 36px 20px 72px; }
+      .pt-card { padding: 28px 22px; }
+      .pt-nav { gap: 2px 20px; }
+      h2 { margin-top: 48px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat, .stat + .stat { border-left: 0; padding: 18px 16px 18px 0; }
+      .stat:nth-child(2n) { border-left: 1px solid var(--fog); padding-left: 18px; padding-right: 0; }
+      .stat:nth-child(n+3) { border-top: 1px solid var(--fog); }
+      .stat .v { font-size: 1.45rem; }
+      .chart-box { height: 280px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   </style>
 </head>
 <body>
-  <header class="pt-bar">
-    <a class="pt-brand" href="{% url 'investors:home' %}">Voss &amp; Thorne<small>Investor Portal</small></a>
-    {% if request.user.is_authenticated and request.investor %}
-      <nav class="pt-nav" aria-label="Portal">
-      {% if not investor.must_change_password %}
-        <a href="{% url 'investors:home' %}" {% if nav == 'dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
-        <a href="{% url 'investors:performance' %}" {% if nav == 'performance' %}aria-current="page"{% endif %}>Performance</a>
-        <a href="{% url 'investors:documents' %}" {% if nav == 'documents' %}aria-current="page"{% endif %}>Documents</a>
-        <a href="{% url 'investors:withdrawals' %}" {% if nav == 'withdrawals' %}aria-current="page"{% endif %}>Withdrawals</a>
-        <a href="{% url 'investors:change_password' %}" {% if nav == 'password' %}aria-current="page"{% endif %}>Password</a>
+  <header class="mast">
+    <div class="mast__inner">
+      <a class="brand" href="{% url 'investors:home' %}">
+        <img src="{% static 'favicon.svg' %}" alt="" width="30" height="30" />
+        <span class="brand__name">Voss &amp; Thorne</span>
+        <span class="brand__sub">Investor portal</span>
+      </a>
+      {% if request.user.is_authenticated and request.investor %}
+        <nav class="pt-nav" aria-label="Portal">
+        {% if not investor.must_change_password %}
+          <a href="{% url 'investors:home' %}" {% if nav == 'dashboard' %}aria-current="page"{% endif %}>Overview</a>
+          <a href="{% url 'investors:performance' %}" {% if nav == 'performance' %}aria-current="page"{% endif %}>Performance</a>
+          <a href="{% url 'investors:documents' %}" {% if nav == 'documents' %}aria-current="page"{% endif %}>Documents</a>
+          <a href="{% url 'investors:withdrawals' %}" {% if nav == 'withdrawals' %}aria-current="page"{% endif %}>Withdrawals</a>
+          <a href="{% url 'investors:change_password' %}" {% if nav == 'password' %}aria-current="page"{% endif %}>Password</a>
+        {% endif %}
+          <form method="post" action="{% url 'investors:logout' %}">{% csrf_token %}
+            <button class="btn-link" type="submit">Sign out</button>
+          </form>
+        </nav>
       {% endif %}
-        <form method="post" action="{% url 'investors:logout' %}">{% csrf_token %}
-          <button class="btn-link" type="submit">Sign out</button>
-        </form>
-      </nav>
-    {% endif %}
+    </div>
   </header>
   {% if investor.is_demo %}<div class="demo-banner" role="note">Demonstration account: every name, balance and document here is fictional.
-    {% if request.session.impersonator_id %}<form method="post" action="{% url 'investors:return_to_admin' %}" style="display:inline;margin-left:14px">{% csrf_token %}<button class="btn-link" type="submit" style="color:var(--text);text-decoration:underline">Return to admin</button></form>{% endif %}
+    {% if request.session.impersonator_id %}<form method="post" action="{% url 'investors:return_to_admin' %}" style="display:inline;margin-left:14px">{% csrf_token %}<button class="btn-link" type="submit" style="color:var(--oxford)">Return to admin</button></form>{% endif %}
   </div>{% endif %}
   <main class="pt-main">
     {% if messages %}{% for m in messages %}<div class="alert ok-{{ m.tags }}" role="status">{{ m }}</div>{% endfor %}{% endif %}
     {% block content %}{% endblock %}</main>
+  <footer class="pt-foot">Voss &amp; Thorne LLP. Private and confidential.</footer>
 </body>
 </html>

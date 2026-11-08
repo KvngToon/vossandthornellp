@@ -12,7 +12,7 @@
 {% endif %}
 
 <h2>Your requests</h2>
-<div class="pt-card tablewrap" style="padding:8px 12px">
+<div class="tablewrap">
   {% if requests %}
   <table class="t">
     <thead><tr><th>Reference</th><th>Investment</th><th class="num">Amount</th><th>Paid to</th><th>Status</th><th>Submitted</th></tr></thead>
@@ -29,6 +29,6 @@
     {% endfor %}
     </tbody>
   </table>
-  {% else %}<p class="note" style="margin:12px">You have not made any withdrawal requests.</p>{% endif %}
+  {% else %}<p class="note">You have not made any withdrawal requests.</p>{% endif %}
 </div>
 {% endblock %}
