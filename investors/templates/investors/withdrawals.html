@@ -3,7 +3,7 @@
 {% block title %}Withdrawals{% endblock %}
 {% block content %}
 <h1>Withdrawals</h1>
-<p class="lead">Request money from your investments. Every request is reviewed by our team, and we call you before anything is paid.</p>
+<p class="lead">Request money from your investments. We review and fraud check every request, and we may call or email you to confirm details before anything is paid.</p>
 
 {% if allowed %}
   <a class="btn" href="{% url 'investors:withdrawal_new' %}" style="margin-top:0">New withdrawal request</a>

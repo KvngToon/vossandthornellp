@@ -19,7 +19,7 @@
 {% elif wr.status == 'completed' %}
   <p class="note">Completed on {{ wr.decided_at|date:"j M Y" }}. It appears in your investment's transactions.</p>
 {% elif wr.is_open %}
-  <p class="note">Our team is handling this request and will call you on the number we hold before any payment is made.</p>
+  <p class="note">Our team is reviewing and fraud checking this request. We may call or email you to confirm details before any payment is made.</p>
 {% endif %}
 
 {% if wr.investor_can_cancel %}

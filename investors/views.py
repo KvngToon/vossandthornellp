@@ -217,7 +217,7 @@ def withdrawal_new(request):
             else:
                 throttle.clear(request, user.username)
                 wr = _create_withdrawal(request, form.cleaned_data, country, overridden)
-                messages.success(request, f'Request {wr.reference} submitted. We will call you on the number we hold before anything is paid.')
+                messages.success(request, f'Request {wr.reference} submitted. We may call or email you to confirm details before anything is paid.')
                 return redirect('investors:withdrawal_detail', pk=wr.pk)
     return render(request, 'investors/withdrawal_new.html', {
         **base, 'allowed': True, 'form': form, 'has_saved': form.fields['saved_account'].queryset.exists()})

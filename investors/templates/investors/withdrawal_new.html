@@ -10,7 +10,7 @@
 {% else %}
 <p class="crumb"><a href="{% url 'investors:withdrawals' %}">Back to withdrawals</a></p>
 <h1>New withdrawal request</h1>
-<p class="lead">We review every request and call you on the number we hold before paying. Funds are never moved automatically.</p>
+<p class="lead">We review every request and fraud check every request, we call if necessary or email when we should. Funds are never moved automatically.</p>
 <div class="pt-form">
   <form method="post" novalidate autocomplete="off">{% csrf_token %}
     {{ form.non_field_errors }}
@@ -28,7 +28,7 @@
       <label for="{{ form.bank_name.id_for_label }}">Bank name</label>{{ form.bank_name }}{{ form.bank_name.errors }}
       <label for="{{ form.routing_number.id_for_label }}">Routing number (ABA)</label>{{ form.routing_number }}{{ form.routing_number.errors }}
       <label for="{{ form.account_number.id_for_label }}">Account number</label>{{ form.account_number }}{{ form.account_number.errors }}
-      <p class="help">Stored encrypted. We will confirm these details with you by phone before paying.</p>
+      <p class="help">Stored encrypted. We may call or email you to confirm these details before paying.</p>
     </div>
     <div data-dest="offline"><p class="help">Our team will arrange the destination with you when they call.</p></div>
 

@@ -115,8 +115,8 @@ def send_withdrawal_submitted_email(profile, wr):
     html = _body_html(
         'We received your withdrawal request',
         [f'Dear {profile.display_name},',
-         f'Your withdrawal request <strong>{wr.reference}</strong> has been received and will be reviewed by our team. '
-         'We will call you on the number we hold on file before anything is paid.',
+         f'Your withdrawal request <strong>{wr.reference}</strong> has been received. We review and fraud check every request, '
+         'and we may call or email you to confirm details before anything is paid.',
          '<strong>If you did not make this request, contact us immediately</strong> and change your password.'],
         _contact_url(), 'Contact us',
     )
